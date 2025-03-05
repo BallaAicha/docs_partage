@@ -1,0 +1,52 @@
+DMN
+•
+DMN stands for Decision Model and Notation.
+•
+DMN serves as a common language to align business and IT on repeatable business rules and decision management.
+•
+Direct Execution: Business analysts can model decision rules in xml files.
+
+
+
+Our project implements the Hexagonal Architecture pattern, also known as Ports and Adapters, this architecture style aims to create loosely coupled application components that can be easily connected by the means of ports and adapters.
+Core concepts:
+•
+Domain: the center of the hexagon
+•
+Ports: Abstract interfaces defining how the domain interacts with the outside world
+•
+Adapters: implementation of ports, handling the translation between the domain and the external system
+
+
+Main components
+The domain contains the definition of contracts, each interface needs to be implemented and override methods.
+
+
+4.2.2. Platform
+Projects use a library (unibank-platform) which brings together all the useful frameworks and libraries to offer all capabilities of communication, persistence, storage, batch, and security.
+In the package below, you can find all the useful interfaces and classes and configuration to create an http client and handle REST, SOAP or GRAPHQL requests.
+
+2.
+File Storage
+The platform offers an S3 client for all object storage.
+The ObjectStorageClient interface brings together all the useful methods for handling files
+
+
+3.
+Persistence
+The platform offers capabilities for handling relational databases with the JPA specification with simple or multitenancy routing and also with Liquibase support for schema migration.
+All the details can be found in the package below.
+
+NB: The database-migration profile allows your service to apply liquibase migration when the application starts
+
+4.
+Security
+The platform offers all the capabilities for effective management of the security of our applications.
+
+For validation to be done correctly, you must always have the jwks files provided by the wso2 team in your service which uses platform for security management (see screenshot below)
+
+
+Platform brings together a set of utility classes to make certain tasks easier fo
+
+
+The bridge is an essential component. It ensures security by implementing OAuth2 for APIs exposed by the CBS. In addition to communicating with SMG, it interacts with other providers such as SMS, email and PowerCard providers.
