@@ -1,10 +1,6 @@
-Voici mes différentes parties de Code :
-package com.socgen.unibank.services.autotest.model.model;
+package com.socgen.unibank.services.autotest.entity;
 
-import com.socgen.unibank.domain.base.AdminUser;
-import com.socgen.unibank.domain.base.DocumentStatus;
-import com.socgen.unibank.platform.domain.Domain;
-import com.socgen.unibank.platform.domain.URN;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,289 +8,179 @@ import lombok.NoArgsConstructor;
 import java.util.Date;
 import java.util.List;
 
+@Entity
+@Table(name = "DOCUMENT")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class DocumentDTO  implements Domain {
-    private URN urn;
-   private String name;
-   private String description;
-   private DocumentStatus status;
-   private List<MetaDataDTO> metadata;
+public class Document {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String name;
+
+    @Column(nullable = false)
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DocumentStatus status;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "document", orphanRemoval = true)
+    private List<MetaData> metadata;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "creation_date", nullable = false)
     private Date creationDate;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "modification_date", nullable = false)
     private Date modificationDate;
-    private AdminUser createdBy;
-    private AdminUser modifiedBy;
+
+    @Column(nullable = false)
+    private String createdBy;
+
+    @Column(nullable = false)
+    private String modifiedBy;
 }
 
 
-package com.socgen.unibank.services.autotest.model.model;
 
+
+——————————————
+
+
+
+package com.socgen.unibank.services.autotest.entity;
+
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+@Entity
+@Table(name = "META_DATA")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MetaDataDTO {
+public class MetaData {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "document_id", nullable = false)
+    private Document document;
+
+    @Column(nullable = false)
     private String key;
+
+    @Column(nullable = false)
     private String value;
 }
 
-package com.socgen.unibank.services.autotest.model.model;
 
-public enum DocumentStatus {
-    ACTIVE, INACTIVE
-}
+——————
+package com.socgen.unibank.services.autotest.repository;
 
-package com.socgen.unibank.services.autotest.model.model;
+import com.socgen.unibank.services.autotest.entity.Document;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.List;
-import java.util.Map;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class CreateDocumentEntryRequest {
-    private String name;
-    private String description;
-    private Map<String, String> metadata;
-    private List<String> tags;
-}
-
-package com.socgen.unibank.services.autotest.model.model;
-
-import io.swagger.v3.oas.annotations.Hidden;
-
-@Hidden
-
-public class GetDocumentEntryListRequest {
+@Repository
+public interface DocumentRepository extends JpaRepository<Document, Long> {
 
 }
 
-Mes UseCases :
-package com.socgen.unibank.services.autotest.model.usecases;
-import com.socgen.unibank.platform.domain.Query;
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-import com.socgen.unibank.services.autotest.model.model.GetDocumentEntryListRequest;
+—————
 
-import java.util.List;
+package com.socgen.unibank.services.autotest.repository;
 
-public interface GetDocumentList  extends Query{
-    List<DocumentDTO> handle(GetDocumentEntryListRequest input, RequestContext context);
-}
+import com.socgen.unibank.services.autotest.entity.MetaData;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-package com.socgen.unibank.services.autotest.model.usecases;
-
-import com.socgen.unibank.platform.domain.Command;
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-
-public interface CreateDocument  extends Command {
-    DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context);
-}
-
-package com.socgen.unibank.services.autotest.model;
-
-
-import com.socgen.unibank.platform.models.RequestContext;
-
-import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-import com.socgen.unibank.services.autotest.model.model.GetDocumentEntryListRequest;
-import com.socgen.unibank.services.autotest.model.usecases.CreateDocument;
-import com.socgen.unibank.services.autotest.model.usecases.GetDocumentList;
-import io.leangen.graphql.annotations.GraphQLQuery;
-import io.leangen.graphql.annotations.GraphQLRootContext;
-import io.swagger.v3.oas.annotations.Operation;
-import org.springframework.web.bind.annotation.RequestBody;
-import io.swagger.v3.oas.annotations.tags.Tag;
-
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-import java.util.List;
-
-@Tag(name = "Document Management")
-@RequestMapping(name = "documents", produces = "application/json")
-public interface DocumentAPI extends GetDocumentList, CreateDocument {
-
-    @GetMapping("/documents")
-    @GraphQLQuery(name = "documentEntries")
-   // @RolesAllowed(Permissions.IS_GUEST)
-    @Override
-    List<DocumentDTO> handle(GetDocumentEntryListRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
-
-
-    @Operation(
-        summary = "Create a new document"
-//        parameters = {
-//            @Parameter(ref = "entityIdHeader", required = true)
-//        }
-    )
-    @PostMapping("/document")
-    @GraphQLQuery(name = "createDocument")
-    //@RolesAllowed(Permissions.IS_GUEST)
-    @Override
-    DocumentDTO handle(@RequestBody CreateDocumentEntryRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
-
+@Repository
+public interface MetaDataRepository extends JpaRepository<MetaData, Long> {
 
 }
 
-Implementation des Usecases :
-package com.socgen.unibank.services.autotest.core.usecases;
-
-import com.socgen.unibank.domain.base.AdminUser;
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.core.DocumentRepository;
-import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
-import com.socgen.unibank.services.autotest.model.usecases.CreateDocument;
-import org.springframework.stereotype.Service;
-import com.socgen.unibank.domain.base.DocumentStatus;
-import java.util.Date;
-import java.util.stream.Collectors;
-
-@Service
-public class CreateDocumentImpl implements CreateDocument {
-
-    private final DocumentRepository documentRepository;
-
-    public CreateDocumentImpl(DocumentRepository documentRepository) {
-        this.documentRepository = documentRepository;
-    }
-
-    @Override
-    public DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context) {
-        DocumentDTO newDocument = new DocumentDTO();
-        newDocument.setName(input.getName());
-        newDocument.setDescription(input.getDescription());
-        newDocument.setStatus(DocumentStatus.CREATED);
-        newDocument.setMetadata(input.getMetadata().entrySet().stream()
-            .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
-            .collect(Collectors.toList()));
-        newDocument.setCreationDate(new Date());
-        newDocument.setModificationDate(new Date());
-        newDocument.setCreatedBy(new AdminUser("usmane@socgen.com"));
-        newDocument.setModifiedBy(new AdminUser("usmane@socgen.com"));
-
-        documentRepository.saveDocument(newDocument);
-        return newDocument;
-    }
-}
-
-package com.socgen.unibank.services.autotest.core.usecases;
-
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.core.DocumentRepository;
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-import com.socgen.unibank.services.autotest.model.model.GetDocumentEntryListRequest;
-import com.socgen.unibank.services.autotest.model.usecases.GetDocumentList;
-import org.springframework.stereotype.Service;
-
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
-
-@Service
-public class GetDocumentListImpl implements GetDocumentList {
-    private final DocumentRepository autoTestRepository;
-
-    public GetDocumentListImpl(DocumentRepository autoTestRepository) {
-        this.autoTestRepository = autoTestRepository;
-    }
-
-    @Override
-    public List<DocumentDTO> handle(GetDocumentEntryListRequest input, RequestContext context) {
-        List<DocumentDTO> entries = autoTestRepository.findAllDocuments();
-        if (input != null) {
-            entries = entries.stream()
-                .sorted(Comparator.comparing(DocumentDTO::getCreationDate).reversed())
-                .collect(Collectors.toList());
-        }
-        return entries;
-    }
-}
-
-package com.socgen.unibank.services.autotest.core;
-
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-
-import java.util.List;
-public interface DocumentRepository {
-    List<DocumentDTO> findAllDocuments();
-
-    void saveDocument(DocumentDTO document);
-}
 
 
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence;
+Pour document ::
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-import com.socgen.unibank.domain.base.AdminUser;
-import com.socgen.unibank.platform.domain.URN;
-import com.socgen.unibank.services.autotest.core.DocumentRepository;
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
-import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
-import com.socgen.unibank.domain.base.DocumentStatus;
-
-@Component
-@AllArgsConstructor
-public class DocumentRepoImpl implements DocumentRepository {
-
-    private final List<DocumentDTO> documents = new ArrayList<>();
-
-    @Override
-    public List<DocumentDTO> findAllDocuments() {
-        List<DocumentDTO> documents = new ArrayList<>();
-        documents.add(new DocumentDTO(
-            new URN(null),
-            "Document 1",
-            "Description of Document 1",
-            DocumentStatus.CREATED,
-            List.of(new MetaDataDTO("key1", "value1")),
-            new Date(),
-            new Date(),
-            new AdminUser("creator1"),
-            new AdminUser("modifier1")
-        ));
-        documents.add(new DocumentDTO(
-            new URN(null),
-            "Document 2",
-            "Description of Document 2",
-            DocumentStatus.CREATED,
-            List.of(new MetaDataDTO("key2", "value2")),
-            new Date(),
-            new Date(),
-            new AdminUser("creator2"),
-            new AdminUser("modifier2")
-        ));
-        return documents;
-    }
-
-    @Override
-    public void saveDocument(DocumentDTO document) {
-        documents.add(document);
-    }
+    <changeSet id="1" author="yourname">
+        <createTable tableName="DOCUMENT">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modification_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>
 
 
-}
 
-Question :: Donne les entités Jpa correspondant et leur relation et leur Repository Respectif  , puis donne moi un changelog avec liquibase pour faire la migration des données.
-je veux utiliser une base h2 pour tester  
+
+Pour metadata ::
+
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="2" author="yourname">
+        <createTable tableName="META_DATA">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="key" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="document_id"
+                                 baseTableName="META_DATA"
+                                 constraintName="fk_document_metadata"
+                                 referencedColumnNames="id"
+                                 referencedTableName="DOCUMENT"/>
+    </changeSet>
+</databaseChangeLog>
