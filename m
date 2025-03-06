@@ -1,57 +1,65 @@
-modifie ici pour qu'il ne mock plus mais il va récupérer les données dans la base ::package com.socgen.unibank.services.autotest.gateways.outbound.persistence;
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence;
 
-import com.socgen.unibank.domain.base.AdminUser;
-import com.socgen.unibank.platform.domain.URN;
 import com.socgen.unibank.services.autotest.core.DocumentRepository;
+import com.socgen.unibank.services.autotest.entity.Document;
+import com.socgen.unibank.services.autotest.entity.MetaData;
 import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
 import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
+import com.socgen.unibank.services.autotest.repository.DocumentRepositoryJpa;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-
-import com.socgen.unibank.domain.base.DocumentStatus;
+import java.util.stream.Collectors;
 
 @Component
 @AllArgsConstructor
 public class DocumentRepoImpl implements DocumentRepository {
 
-    private final List<DocumentDTO> documents = new ArrayList<>();
-
-//    @Override
-//    public List<DocumentDTO> findAllDocuments() {
-//        List<DocumentDTO> documents = new ArrayList<>();
-//        documents.add(new DocumentDTO(
-//            new URN(null),
-//            "Document 1",
-//            "Description of Document 1",
-//            DocumentStatus.CREATED,
-//            List.of(new MetaDataDTO("key1", "value1")),
-//            new Date(),
-//            new Date(),
-//            new AdminUser("creator1"),
-//            new AdminUser("modifier1")
-//        ));
-//        documents.add(new DocumentDTO(
-//            new URN(null),
-//            "Document 2",
-//            "Description of Document 2",
-//            DocumentStatus.CREATED,
-//            List.of(new MetaDataDTO("key2", "value2")),
-//            new Date(),
-//            new Date(),
-//            new AdminUser("creator2"),
-//            new AdminUser("modifier2")
-//        ));
-//        return documents;
-//    }
+    private final DocumentRepositoryJpa documentRepositoryJpa;
 
     @Override
-    public void saveDocument(DocumentDTO document) {
-        documents.add(document);
+    public List<DocumentDTO> findAllDocuments() {
+        // Charger toutes les entités Document depuis la base de données
+        List<Document> documents = documentRepositoryJpa.findAll();
+
+        // Convertir les entités en DTO pour les retourner
+        return documents.stream()
+                .map(document -> new DocumentDTO(
+                        null, // URN can be set as per your logic
+                        document.getName(),
+                        document.getDescription(),
+                        document.getStatus(),
+                        document.getMetadata().stream()
+                                .map(metaData -> new MetaDataDTO(metaData.getKey(), metaData.getValue()))
+                                .collect(Collectors.toList()),
+                        document.getCreationDate(),
+                        document.getModificationDate(),
+                        null, // Mapping AdminUser can be added according to your requirements
+                        null
+                ))
+                .collect(Collectors.toList());
     }
 
+    @Override
+    public void saveDocument(DocumentDTO documentDTO) {
+        // Convertir le DTO en une entité et sauvegarder dans la base
+        Document document = new Document();
 
+        document.setName(documentDTO.getName());
+        document.setDescription(documentDTO.getDescription());
+        document.setStatus(documentDTO.getStatus());
+        document.setCreationDate(documentDTO.getCreationDate());
+        document.setModificationDate(documentDTO.getModificationDate());
+        document.setCreatedBy(documentDTO.getCreatedBy().getEmail());  // Assuming AdminUser has an `email` field
+        document.setModifiedBy(documentDTO.getModifiedBy().getEmail());
+
+        // Convertir les métadonnées
+        List<MetaData> metadataList = documentDTO.getMetadata().stream()
+                .map(metadataDTO -> new MetaData(null, document, metadataDTO.getKey(), metadataDTO.getValue()))
+                .collect(Collectors.toList());
+        document.setMetadata(metadataList);
+
+        documentRepositoryJpa.save(document);
+    }
 }
