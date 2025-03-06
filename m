@@ -1,91 +1,175 @@
-Voici un use case claire de comment les projets sont codés ils sont divisés par module :
+Voici mon interface pour le Repository :
 
-Créer un projet gradle :
-Gradle.properties :
-group
-version
-unibank.domain_version
-unibank.platform_version=
+public interface AutoTestRepository {
 
+}
+
+ List<DocumentDTO> findAllDocuments();
 
 
-Créer un premier module de ce genre :
-Exemple : unibank-service-content-api
-com.socgen.unibank.services.content.model
+Voici son impl :
 
-Exemple : 
+@Component
+@AllArgsConstructor
+public class AutoTestRepoImpl implements AutoTestRepository {
+
+
+}
+
+    @Override
+    public List<DocumentDTO> findAllDocuments() {
+        return List.of();
+    }
+
+
+complete la logique findAllDocuments du AutoTestRepository  et complete aussi :
+package com.socgen.unibank.services.autotest.core.usecases;
+
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.model.ContentEntry;
+import com.socgen.unibank.services.autotest.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.GetDocumentEntryListRequest;
+import com.socgen.unibank.services.autotest.model.GetDocumentList;
+
+import java.util.List;
+
+public class GetDocumentListImpl implements GetDocumentList {
+    @Override
+    public List<DocumentDTO> handle(GetDocumentEntryListRequest input, RequestContext context) {
+        List<DocumentDTO> entries;
+        return List.of();
+    }
+}
+
+
+Sachant que voici ma logique de code ::
+package com.socgen.unibank.services.autotest.model;
+
+import com.socgen.unibank.domain.base.AdminUser;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import com.socgen.unibank.platform.domain.Domain;
+import com.socgen.unibank.platform.domain.URN;
+import io.leangen.graphql.annotations.GraphQLNonNull;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Date;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ContentEntry implements Domain {
-
+public class DocumentDTO  implements Domain {
+    @GraphQLNonNull
+    @NotNull
     private URN urn;
-
-    private String title;
-
-    private String body;
-
-    private String version;
-
-    private ContentStatus status ;
-
-    private ContentType type;
-
-    private ContentFormat format;
-
-    private String tags;
-
-    private URN category;
-
-    private URN space;
-    
-    private int order;
-    
+   private String name;
+   private String description;
+   private DocumentStatus status;
+   private List<MetaDataDTO> metadata;
     private Date creationDate;
-    
     private Date modificationDate;
-    
     private AdminUser createdBy;
-    
     private AdminUser modifiedBy;
-    
-    private Language language;
-
-    public ContentEntry(URN urn, ContentType type, String title, String body, String version) {
-        this.urn = urn;
-        this.title = title;
-        this.type = type;
-        this.body = body;
-        this.version = version;
-    }
-
-    @JsonIgnore
-    public boolean isNotPublished() {
-        return status != ContentStatus.PUBLISHED;
-    }
-
 }
 
+package com.socgen.unibank.services.autotest.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class MetaDataDTO {
+    private String key;
+    private String value;
+}
+
+
+package com.socgen.unibank.services.autotest.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.Map;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreateDocumentEntryRequest {
+    private String name;
+    private String description;
+    private Map<String, String> metadata;
+    private List<String> tags;
+}
+
+package com.socgen.unibank.services.autotest.model;
+
+import io.swagger.v3.oas.annotations.Hidden;
+
+@Hidden
+public class GetDocumentEntryListRequest {
+    public GetDocumentEntryListRequest() {
+    }
+}
+
+package com.socgen.unibank.services.autotest.model;
+import com.socgen.unibank.platform.domain.Query;
+import com.socgen.unibank.platform.models.RequestContext;
 
 import java.util.List;
 
-public interface GetContentEntryList extends Query {
+public interface GetDocumentList  extends Query{
+    List<DocumentDTO> handle(GetDocumentEntryListRequest input, RequestContext context);
+}
 
-    List<ContentEntry> handle(GetContentEntryListRequest input, RequestContext context);
+package com.socgen.unibank.services.autotest.model;
 
+import com.socgen.unibank.domain.business.admin.usecases.SaveBranchListRequest;
+import com.socgen.unibank.platform.domain.Command;
+import com.socgen.unibank.platform.models.RequestContext;
+
+public interface CreateDocument  extends Command {
+    DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context);
 }
 
 
-RequestMapping(name = "content", produces = "application/json")
-public interface ContentAPI extends GetContentEntryList
+package com.socgen.unibank.services.autotest;
+
+import com.socgen.unibank.platform.domain.Permissions;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.model.*;
+import io.leangen.graphql.annotations.GraphQLQuery;
+import io.leangen.graphql.annotations.GraphQLRootContext;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.security.RolesAllowed;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import java.util.List;
+
+@Tag(name = "Content Management")
+@RequestMapping(name = "content", produces = "application/json")
+public interface DocumentAPI extends GetContentEntryList, TestHello , GetDocumentList , CreateDocument
     {
 
     @Operation(
         summary = "Fetch all content entries based on provided filter",
         parameters = {
             @Parameter(ref = "entityIdHeader", required = true),
-            @Parameter(name = "type",  in = ParameterIn.QUERY, schema = @Schema(implementation = ContentType.class)),
+            @Parameter(name = "type", in = ParameterIn.QUERY, schema = @Schema(implementation = ContentType.class)),
             @Parameter(name = "count", in = ParameterIn.QUERY, schema = @Schema(type = "integer"))
         }
     )
@@ -96,236 +180,41 @@ public interface ContentAPI extends GetContentEntryList
     List<ContentEntry> handle(GetContentEntryListRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
 
 
-}
-
-Un autre module appelé :
-unibank-service-content-core
-
-package com.socgen.unibank.services.content.core.usecases;
-@Component
-@AllArgsConstructor
-public class GetContentEntryListImpl implements GetContentEntryList {
-
-    private final ContentRepository contentRepository;
-
-    @Override
-    public List<ContentEntry> handle(GetContentEntryListRequest input, RequestContext context) {
-       List<ContentEntry> entries;
-
-            if (input != null && input.getType() != null){
-                entries = contentRepository.findEntriesBy(input.getType(), Optional.ofNullable(input.getStatus()).orElse(ContentStatus.PUBLISHED),
-                    Optional.ofNullable(input.getLanguage()).orElse(context.getUserLanguage()),
-                    Optional.ofNullable(input.getCount()).orElse(100));
+        @Operation(
+            summary = "test",
+            parameters = {
+                @Parameter(ref = "entityIdHeader", required = true),
             }
-            else{
-                entries = contentRepository.findAllEntries();
+        )
+        @GetMapping("/test")
+        @Override
+        TestHelloResponse handle(TestHelloRequest input, RequestContext context);
+
+
+
+        @Operation(
+            summary = "Fetch document list based on provided filter",
+            parameters = {
+                @Parameter(ref = "entityIdHeader", required = true)
             }
+        )
+        @GetMapping("/documents")
+        @GraphQLQuery(name = "documentEntries")
+        @RolesAllowed(Permissions.IS_GUEST)
+        @Override
+        List<DocumentDTO> handle(GetDocumentEntryListRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
 
-       return entries.stream().sorted(Comparator.comparingInt(ContentEntry::getOrder)).collect(Collectors.toList());
-    }
 
-}
-
-
-@Entity
-@Table(name = "content_entries")
-@Data
-public class EntryEntity {
-
-    @EmbeddedId
-    @AttributeOverride(name = "value", column = @Column(name = "id"))
-    private URN id;
-
-    private String version;
-
-    private String title;
-
-    private String tags;
-
-    @Lob
-    private String body;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date createdOn;
-
-    private String createdBy;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date lastUpdatedOn;
-
-    private String lastUpdatedBy;
-
-    @Enumerated(EnumType.STRING)
-    private ContentStatus status;
-
-    @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "category")
-    private CategoryEntity category;
-
-    @Enumerated(EnumType.STRING)
-    private ContentType type;
-
-    @Enumerated(EnumType.STRING)
-    private ContentFormat format;
-
-    @Column(name = "position")
-    private int order;
-
-    @Enumerated(EnumType.STRING)
-    private Language language;
-
-    @AttributeOverride(name = "value", column = @Column(name = "space"))
-    private URN space;
-
-    public static EntryEntity from(ContentEntry domain) {
-        EntryEntity entity = new EntryEntity();
-        entity.setId(domain.getUrn());
-        entity.setVersion(domain.getVersion());
-        entity.setTitle(domain.getTitle());
-        entity.setTags(domain.getTags());
-        entity.setBody(domain.getBody());
-        entity.setCreatedOn(domain.getCreationDate());
-        entity.setLastUpdatedOn(domain.getModificationDate());
-        entity.setLastUpdatedBy(domain.getModifiedBy().getEmail());
-        entity.setCreatedBy(domain.getCreatedBy().getEmail());
-        entity.setStatus(domain.getStatus());
-        if(domain.getCategory()!=null) {
-            CategoryEntity categoryEntity = new CategoryEntity();
-            categoryEntity.setId(domain.getCategory());
-            entity.setCategory(categoryEntity);
-        }
-        entity.setType(domain.getType());
-        entity.setFormat(domain.getFormat() != null ? domain.getFormat() : ContentFormat.TEXT);
-        entity.setOrder(domain.getOrder());
-        entity.setLanguage(domain.getLanguage());
-        entity.setSpace(domain.getSpace());
-        return entity;
-    }
-
-    public ContentEntry toDomain() {
-        ContentSpace contentSpace = new ContentSpace();
-        ContentEntry contentEntry = new ContentEntry();
-        contentEntry.setUrn(id);
-        contentEntry.setVersion(version);
-        contentEntry.setTitle(title);
-        contentEntry.setBody(body);
-        contentEntry.setTags(tags);
-        contentEntry.setCreationDate(createdOn);
-        contentEntry.setModifiedBy(new AdminUser(lastUpdatedBy));
-        contentEntry.setCreatedBy(new AdminUser(createdBy));
-        contentEntry.setModificationDate(lastUpdatedOn);
-        contentEntry.setStatus(status);
-        contentEntry.setSpace(contentSpace.getUrn());
-        if(category!=null) {
-            contentEntry.setCategory(category.getId());
-        }
-        contentEntry.setType(type);
-        contentEntry.setFormat(format);
-        contentEntry.setOrder(order);
-        contentEntry.setLanguage(language);
-        return contentEntry;
-    }
-
+        @Operation(
+            summary = "Create a new document",
+            parameters = {
+                @Parameter(ref = "entityIdHeader", required = true)
+            }
+        )
+        @PostMapping("/document")
+        @GraphQLQuery(name = "createDocument")
+        @RolesAllowed(Permissions.IS_GUEST)
+        @Override
+        DocumentDTO handle(CreateDocumentEntryRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
 
 }
-@Component
-public interface EntryJpaRepo extends JpaRepository<EntryEntity, URN> {
-
-    long countByType(ContentType type);
-
-    List<EntryEntity> findByTypeAndStatusOrderByCreatedOnDesc(ContentType type, ContentStatus status, Pageable pageable);
-    
-    List<EntryEntity> findByTypeAndStatusAndLanguageOrderByCreatedOnDesc(ContentType type, ContentStatus status, Language language, Pageable pageable);
-
-    void deleteByTypeAndLanguage(ContentType type,Language language);
-
-    @Modifying
-    @Query("update EntryEntity e set e.status ='ARCHIVED' where e.type = :contentType  and e.language = :language")
-    void archiveEntry( @Param("language")Language language, @Param("contentType") ContentType contentType);
-
-}
-
-
-@Component
-@AllArgsConstructor
-public class ContentRepoImpl implements ContentRepository {
-
-    private EntryJpaRepo entries;
-    private  CategoryJpaRepo categories;
-    private  SpaceJpaRepo spaces;
-
-
-    @Override
-    public ContentSpace saveSpace(ContentSpace value) {
-        SpaceEntity entity = SpaceEntity.from(value);
-        spaces.save(entity);
-        return entity.toDomain();
-    }
-
-
-    @Override
-    public void deleteEntryByTypeAndLanguage(ContentType type, Language language) {
-        entries.deleteByTypeAndLanguage(type,language);
-    }
-
-    @Override
-    public void saveContentEntries(List<ContentEntry> entries) {
-        List<EntryEntity> entities = entries.stream().map(EntryEntity::from).collect(Collectors.toList());
-        this.entries.saveAll(entities);
-    }
-
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ContentEntry> findAllEntries() {
-        List<EntryEntity> entities = entries.findAll();
-        return entities.stream().map(EntryEntity::toDomain).collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ContentEntry> findEntriesBy(ContentType type, ContentStatus status, Language language, int count) {
-        List<EntryEntity> entities = entries.findByTypeAndStatusAndLanguageOrderByCreatedOnDesc(type, status, language, PageRequest.of(0, count));
-        return entities.stream().map(EntryEntity::toDomain).collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional
-    public void archiveEntry(ContentType contentType,Language language) {
-        entries.archiveEntry(language,contentType);
-    }
-
-
-
-
-
-}
-
-Un autre module :: unibank-service-content
-package com.socgen.unibank.services.content.gateways.inbound;
-
-
-import com.socgen.unibank.platform.models.OpenAPIRefs;
-import com.socgen.unibank.platform.springboot.config.web.GraphQLController;
-import com.socgen.unibank.services.content.ContentAPI;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import org.springframework.web.bind.annotation.RestController;
-
-@GraphQLController
-@RestController
-@SecurityRequirement(name = OpenAPIRefs.OAUTH2)
-@SecurityRequirement(name = OpenAPIRefs.JWT)
-public interface ContentEndpoint extends ContentAPI {
-}
-@Configuration
-public class ContentBeansFactory {
-
-    @Bean
-    ProxyEndpoints createContentAPIEndpoints() {
-        return ProxyEndpoints.create(ContentEndpoint.class);
-    }
-
-
-
-}
-
