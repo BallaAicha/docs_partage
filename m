@@ -1,13 +1,10 @@
-Voici mes différents partie de Code ::
-DTOS :
-package com.socgen.unibank.services.autotest.model;
+Voici mes différentes parties de Code :
+package com.socgen.unibank.services.autotest.model.model;
 
 import com.socgen.unibank.domain.base.AdminUser;
 import com.socgen.unibank.domain.base.DocumentStatus;
 import com.socgen.unibank.platform.domain.Domain;
 import com.socgen.unibank.platform.domain.URN;
-import io.leangen.graphql.annotations.GraphQLNonNull;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,7 +27,8 @@ public class DocumentDTO  implements Domain {
     private AdminUser modifiedBy;
 }
 
-package com.socgen.unibank.services.autotest.model;
+
+package com.socgen.unibank.services.autotest.model.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -44,32 +42,13 @@ public class MetaDataDTO {
     private String value;
 }
 
+package com.socgen.unibank.services.autotest.model.model;
 
-Interfaces :::
-
-package com.socgen.unibank.services.autotest.model;
-import com.socgen.unibank.platform.domain.Query;
-import com.socgen.unibank.platform.models.RequestContext;
-
-import java.util.List;
-
-public interface GetDocumentList  extends Query{
-    List<DocumentDTO> handle(GetDocumentEntryListRequest input, RequestContext context);
+public enum DocumentStatus {
+    ACTIVE, INACTIVE
 }
 
-
-package com.socgen.unibank.services.autotest.model;
-
-import com.socgen.unibank.domain.business.admin.usecases.SaveBranchListRequest;
-import com.socgen.unibank.platform.domain.Command;
-import com.socgen.unibank.platform.models.RequestContext;
-
-public interface CreateDocument  extends Command {
-    DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context);
-}
-
-
-package com.socgen.unibank.services.autotest.model;
+package com.socgen.unibank.services.autotest.model.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -88,11 +67,9 @@ public class CreateDocumentEntryRequest {
     private List<String> tags;
 }
 
-package com.socgen.unibank.services.autotest.model;
+package com.socgen.unibank.services.autotest.model.model;
 
 import io.swagger.v3.oas.annotations.Hidden;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 
 @Hidden
 
@@ -100,16 +77,44 @@ public class GetDocumentEntryListRequest {
 
 }
 
+Mes UseCases :
+package com.socgen.unibank.services.autotest.model.usecases;
+import com.socgen.unibank.platform.domain.Query;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.model.GetDocumentEntryListRequest;
+
+import java.util.List;
+
+public interface GetDocumentList  extends Query{
+    List<DocumentDTO> handle(GetDocumentEntryListRequest input, RequestContext context);
+}
+
+package com.socgen.unibank.services.autotest.model.usecases;
+
+import com.socgen.unibank.platform.domain.Command;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+
+public interface CreateDocument  extends Command {
+    DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context);
+}
+
 package com.socgen.unibank.services.autotest.model;
 
 
 import com.socgen.unibank.platform.models.RequestContext;
 
+import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.model.GetDocumentEntryListRequest;
+import com.socgen.unibank.services.autotest.model.usecases.CreateDocument;
+import com.socgen.unibank.services.autotest.model.usecases.GetDocumentList;
 import io.leangen.graphql.annotations.GraphQLQuery;
 import io.leangen.graphql.annotations.GraphQLRootContext;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-
+import org.springframework.web.bind.annotation.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -121,7 +126,7 @@ import java.util.List;
 
 @Tag(name = "Document Management")
 @RequestMapping(name = "documents", produces = "application/json")
-public interface DocumentAPI extends  GetDocumentList , CreateDocument {
+public interface DocumentAPI extends GetDocumentList, CreateDocument {
 
     @GetMapping("/documents")
     @GraphQLQuery(name = "documentEntries")
@@ -131,33 +136,74 @@ public interface DocumentAPI extends  GetDocumentList , CreateDocument {
 
 
     @Operation(
-        summary = "Create a new document",
-        parameters = {
-            @Parameter(ref = "entityIdHeader", required = true)
-        }
+        summary = "Create a new document"
+//        parameters = {
+//            @Parameter(ref = "entityIdHeader", required = true)
+//        }
     )
     @PostMapping("/document")
     @GraphQLQuery(name = "createDocument")
     //@RolesAllowed(Permissions.IS_GUEST)
     @Override
-    DocumentDTO handle(CreateDocumentEntryRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
+    DocumentDTO handle(@RequestBody CreateDocumentEntryRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
+
 
 }
 
+Implementation des Usecases :
+package com.socgen.unibank.services.autotest.core.usecases;
 
+import com.socgen.unibank.domain.base.AdminUser;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.core.DocumentRepository;
+import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
+import com.socgen.unibank.services.autotest.model.usecases.CreateDocument;
+import org.springframework.stereotype.Service;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import java.util.Date;
+import java.util.stream.Collectors;
+
+@Service
+public class CreateDocumentImpl implements CreateDocument {
+
+    private final DocumentRepository documentRepository;
+
+    public CreateDocumentImpl(DocumentRepository documentRepository) {
+        this.documentRepository = documentRepository;
+    }
+
+    @Override
+    public DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context) {
+        DocumentDTO newDocument = new DocumentDTO();
+        newDocument.setName(input.getName());
+        newDocument.setDescription(input.getDescription());
+        newDocument.setStatus(DocumentStatus.CREATED);
+        newDocument.setMetadata(input.getMetadata().entrySet().stream()
+            .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
+            .collect(Collectors.toList()));
+        newDocument.setCreationDate(new Date());
+        newDocument.setModificationDate(new Date());
+        newDocument.setCreatedBy(new AdminUser("usmane@socgen.com"));
+        newDocument.setModifiedBy(new AdminUser("usmane@socgen.com"));
+
+        documentRepository.saveDocument(newDocument);
+        return newDocument;
+    }
+}
 
 package com.socgen.unibank.services.autotest.core.usecases;
 
 import com.socgen.unibank.platform.models.RequestContext;
 import com.socgen.unibank.services.autotest.core.DocumentRepository;
-import com.socgen.unibank.services.autotest.model.DocumentDTO;
-import com.socgen.unibank.services.autotest.model.GetDocumentEntryListRequest;
-import com.socgen.unibank.services.autotest.model.GetDocumentList;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.model.GetDocumentEntryListRequest;
+import com.socgen.unibank.services.autotest.model.usecases.GetDocumentList;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -182,32 +228,29 @@ public class GetDocumentListImpl implements GetDocumentList {
 
 package com.socgen.unibank.services.autotest.core;
 
-import com.socgen.unibank.platform.domain.Language;
-import com.socgen.unibank.services.autotest.model.*;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
 
 import java.util.List;
 public interface DocumentRepository {
     List<DocumentDTO> findAllDocuments();
 
+    void saveDocument(DocumentDTO document);
 }
 
 
 package com.socgen.unibank.services.autotest.gateways.outbound.persistence;
 
 import com.socgen.unibank.domain.base.AdminUser;
-import com.socgen.unibank.platform.domain.Language;
 import com.socgen.unibank.platform.domain.URN;
 import com.socgen.unibank.services.autotest.core.DocumentRepository;
-import com.socgen.unibank.services.autotest.model.*;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
 import lombok.AllArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.socgen.unibank.domain.base.DocumentStatus;
 
@@ -215,7 +258,7 @@ import com.socgen.unibank.domain.base.DocumentStatus;
 @AllArgsConstructor
 public class DocumentRepoImpl implements DocumentRepository {
 
-
+    private final List<DocumentDTO> documents = new ArrayList<>();
 
     @Override
     public List<DocumentDTO> findAllDocuments() {
@@ -245,89 +288,13 @@ public class DocumentRepoImpl implements DocumentRepository {
         return documents;
     }
 
+    @Override
+    public void saveDocument(DocumentDTO document) {
+        documents.add(document);
+    }
+
 
 }
 
-
-package com.socgen.unibank.services.autotest.gateways.inbound;
-
-
-import com.socgen.unibank.platform.models.OpenAPIRefs;
-import com.socgen.unibank.platform.springboot.config.web.GraphQLController;
-
-import com.socgen.unibank.services.autotest.model.DocumentAPI;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import org.springframework.web.bind.annotation.RestController;
-
-@GraphQLController
-@RestController
-//@SecurityRequirement(name = OpenAPIRefs.OAUTH2)
-//@SecurityRequirement(name = OpenAPIRefs.JWT)
-public interface DocumentEndpoint extends DocumentAPI {
-}
-
-
-
-Consigne : 
-Pour la méthode get tout se passe bien j'ai bien récupéré des données :
-http://localhost:8082/documents
-[
-  {
-    "urn": null,
-    "name": "Document 1",
-    "description": "Description of Document 1",
-    "status": "CREATED",
-    "metadata": [
-      {
-        "key": "key1",
-        "value": "value1"
-      }
-    ],
-    "creationDate": "2025-03-06T11:24:22.565+00:00",
-    "modificationDate": "2025-03-06T11:24:22.565+00:00",
-    "createdBy": {
-      "urn": null,
-      "name": null,
-      "email": "creator1",
-      "role": null,
-      "active": false
-    },
-    "modifiedBy": {
-      "urn": null,
-      "name": null,
-      "email": "modifier1",
-      "role": null,
-      "active": false
-    }
-  },
-  {
-    "urn": null,
-    "name": "Document 2",
-    "description": "Description of Document 2",
-    "status": "CREATED",
-    "metadata": [
-      {
-        "key": "key2",
-        "value": "value2"
-      }
-    ],
-    "creationDate": "2025-03-06T11:24:22.565+00:00",
-    "modificationDate": "2025-03-06T11:24:22.565+00:00",
-    "createdBy": {
-      "urn": null,
-      "name": null,
-      "email": "creator2",
-      "role": null,
-      "active": false
-    },
-    "modifiedBy": {
-      "urn": null,
-      "name": null,
-      "email": "modifier2",
-      "role": null,
-      "active": false
-    }
-  }
-]
-
-Maintenant code la logique pour ajouter un Document , donne les entités nécessaires les relation et respecte le meme structure de codage que le Get et donne un jeux de données pour tester
+Question :: Donne les entités Jpa correspondant et leur relation et leur Repository Respectif  , puis donne moi un changelog avec liquibase pour faire la migration des données.
+je veux utiliser une base h2 pour tester  
