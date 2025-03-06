@@ -1,186 +1,57 @@
-package com.socgen.unibank.services.autotest.entity;
+modifie ici pour qu'il ne mock plus mais il va récupérer les données dans la base ::package com.socgen.unibank.services.autotest.gateways.outbound.persistence;
 
-import jakarta.persistence.*;
+import com.socgen.unibank.domain.base.AdminUser;
+import com.socgen.unibank.platform.domain.URN;
+import com.socgen.unibank.services.autotest.core.DocumentRepository;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-@Entity
-@Table(name = "DOCUMENT")
-@Data
-@NoArgsConstructor
+import com.socgen.unibank.domain.base.DocumentStatus;
+
+@Component
 @AllArgsConstructor
-public class Document {
+public class DocumentRepoImpl implements DocumentRepository {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private final List<DocumentDTO> documents = new ArrayList<>();
 
-    @Column(nullable = false, unique = true)
-    private String name;
+//    @Override
+//    public List<DocumentDTO> findAllDocuments() {
+//        List<DocumentDTO> documents = new ArrayList<>();
+//        documents.add(new DocumentDTO(
+//            new URN(null),
+//            "Document 1",
+//            "Description of Document 1",
+//            DocumentStatus.CREATED,
+//            List.of(new MetaDataDTO("key1", "value1")),
+//            new Date(),
+//            new Date(),
+//            new AdminUser("creator1"),
+//            new AdminUser("modifier1")
+//        ));
+//        documents.add(new DocumentDTO(
+//            new URN(null),
+//            "Document 2",
+//            "Description of Document 2",
+//            DocumentStatus.CREATED,
+//            List.of(new MetaDataDTO("key2", "value2")),
+//            new Date(),
+//            new Date(),
+//            new AdminUser("creator2"),
+//            new AdminUser("modifier2")
+//        ));
+//        return documents;
+//    }
 
-    @Column(nullable = false)
-    private String description;
+    @Override
+    public void saveDocument(DocumentDTO document) {
+        documents.add(document);
+    }
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private DocumentStatus status;
-
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "document", orphanRemoval = true)
-    private List<MetaData> metadata;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "creation_date", nullable = false)
-    private Date creationDate;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "modification_date", nullable = false)
-    private Date modificationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
-
-    @Column(nullable = false)
-    private String modifiedBy;
-}
-
-
-
-
-——————————————
-
-
-
-package com.socgen.unibank.services.autotest.entity;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Entity
-@Table(name = "META_DATA")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class MetaData {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "document_id", nullable = false)
-    private Document document;
-
-    @Column(nullable = false)
-    private String key;
-
-    @Column(nullable = false)
-    private String value;
-}
-
-
-——————
-package com.socgen.unibank.services.autotest.repository;
-
-import com.socgen.unibank.services.autotest.entity.Document;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-@Repository
-public interface DocumentRepository extends JpaRepository<Document, Long> {
 
 }
-
-—————
-
-package com.socgen.unibank.services.autotest.repository;
-
-import com.socgen.unibank.services.autotest.entity.MetaData;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-@Repository
-public interface MetaDataRepository extends JpaRepository<MetaData, Long> {
-
-}
-
-
-
-Pour document ::
-<?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
-
-    <changeSet id="1" author="yourname">
-        <createTable tableName="DOCUMENT">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="name" type="VARCHAR(255)">
-                <constraints nullable="false" unique="true"/>
-            </column>
-            <column name="description" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="status" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="creation_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modification_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modified_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-</databaseChangeLog>
-
-
-
-
-Pour metadata ::
-
-<?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
-
-    <changeSet id="2" author="yourname">
-        <createTable tableName="META_DATA">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="document_id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="key" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="value" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addForeignKeyConstraint baseColumnNames="document_id"
-                                 baseTableName="META_DATA"
-                                 constraintName="fk_document_metadata"
-                                 referencedColumnNames="id"
-                                 referencedTableName="DOCUMENT"/>
-    </changeSet>
-</databaseChangeLog>
