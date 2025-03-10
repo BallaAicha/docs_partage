@@ -1,206 +1,84 @@
-Voici mes différentes parties de Code pour Document , en fait dans Document je veux gérer des fichiers que je vais stocker dans S3 , améliore Document en ajoutant les parties nécessaires pour le upload d'un fichier pour le stocker dans S3:
-
-DocumentDTO :
-package com.socgen.unibank.services.autotest.model.model;
-import com.socgen.unibank.domain.base.AdminUser;
-import com.socgen.unibank.domain.base.DocumentStatus;
-import com.socgen.unibank.platform.domain.Domain;
-import com.socgen.unibank.platform.domain.URN;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import java.util.Date;
-import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class DocumentDTO {
 
     private Long documentId;
-   private String name;
-   private String description;
-   private DocumentStatus status;
-   private List<MetaDataDTO> metadata;
+    private String name;
+    private String description;
+    private DocumentStatus status;
+    private List<MetaDataDTO> metadata;
     private Date creationDate;
     private Date modificationDate;
     private AdminUser createdBy;
     private AdminUser modifiedBy;
-    private FolderDTO folder;  // Ajout du champ folder
-}
-
-
-UseCases ::
-package com.socgen.unibank.services.autotest.model.usecases;
-import com.socgen.unibank.platform.domain.Command;
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-public interface CreateDocument  extends Command {
-    DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context);
-}
-
-
-package com.socgen.unibank.services.autotest.model;
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.model.model.*;
-import com.socgen.unibank.services.autotest.model.usecases.*;
-import io.leangen.graphql.annotations.GraphQLQuery;
-import io.leangen.graphql.annotations.GraphQLRootContext;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
-import org.springframework.web.bind.annotation.*;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.List;
-@Tag(name = "Document Management")
-@RequestMapping(name = "documents", produces = "application/json")
-public interface DocumentAPI extends GetDocumentList, CreateDocument , GetDocumentVersions , CreateDocumentVersion , GetFolder ,CreateFolder {
-    @Operation(
-        summary = "Lists des documents",
-        parameters = {
-            @Parameter(ref = "entityIdHeader", required = true),
-
-        }
-    )
-    @GetMapping("/documents")
-    @GraphQLQuery(name = "documentEntries")
-   // @RolesAllowed(Permissions.IS_GUEST)
-    @Override
-    List<DocumentDTO> handle(GetDocumentEntryListRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
-    @Operation(
-        summary = "Create a new document",
-        parameters = {
-        @Parameter(ref = "entityIdHeader", required = true),
-        }
-    )
-    @PostMapping("/document")
-    @GraphQLQuery(name = "createDocument")
-    //@RolesAllowed(Permissions.IS_GUEST)
-    @Override
-    DocumentDTO handle(@RequestBody CreateDocumentEntryRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
-    @Operation(
-        summary = "Get document versions",
-        parameters = {
-            @Parameter(name = "documentId", description = "ID of the document", required = true, in = ParameterIn.PATH),
-            @Parameter(ref = "entityIdHeader", required = true),
-        }
-    )
-    @GetMapping("/documents/{documentId}/versions")
-    @GraphQLQuery(name = "documentVersions")
-    List<DocumentVersionDTO> handle(GetDocumentVersionEntryRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
-    @Operation(
-        summary = "Add a new document version",
-        parameters = {
-            @Parameter(ref = "entityIdHeader", required = true),
-        }
-    )
-    @PostMapping("/documents/{documentId}/versions")
-    @GraphQLQuery(name = "addDocumentVersion")
-    @Override
-    DocumentVersionDTO handle(@RequestBody CreateDocumentVersionRequest input, @GraphQLRootContext @ModelAttribute RequestContext ctx);
-
-
-    @Operation
-        (summary = "Get list of folders",
-            parameters = {
-                @Parameter(ref = "entityIdHeader", required = true),
-
-            }
-        )
-    @GetMapping("/folders")
-    @Override
-    List<FolderDTO> handle(GetFolderRequest input, @ModelAttribute RequestContext ctx);
-
-    @Operation(
-        summary = "Create a new folder",
-        parameters = {
-            @Parameter(ref = "entityIdHeader", required = true),
-
-        }
-    )
-    @PostMapping("/folder")
-    @Override
-    FolderDTO handle(@RequestBody CreateFolderRequest input, @ModelAttribute RequestContext ctx);
-
-
+    private FolderDTO folder;
+    
+    // Nouveau champ : URL du fichier S3
+    private String s3Url;
 }
 
 
 
 
-Implémentation ::
-//package com.socgen.unibank.services.autotest.core.usecases;
-//
-//import com.socgen.unibank.domain.base.AdminUser;
-//import com.socgen.unibank.platform.models.RequestContext;
-//import com.socgen.unibank.services.autotest.core.DocumentRepository;
-//import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
-//import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-//import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
-//import com.socgen.unibank.services.autotest.model.usecases.CreateDocument;
-//import org.springframework.stereotype.Service;
-//import com.socgen.unibank.domain.base.DocumentStatus;
-//import java.util.Date;
-//import java.util.stream.Collectors;
-//
-//@Service
-//public class CreateDocumentImpl implements CreateDocument {
-//
-//    private final DocumentRepository documentRepository;
-//
-//    public CreateDocumentImpl(DocumentRepository documentRepository) {
-//        this.documentRepository = documentRepository;
-//    }
-//
-//    @Override
-//    public DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context) {
-//        DocumentDTO newDocument = new DocumentDTO();
-//        newDocument.setName(input.getName());
-//        newDocument.setDescription(input.getDescription());
-//        newDocument.setStatus(DocumentStatus.CREATED);
-//        newDocument.setMetadata(input.getMetadata().entrySet().stream()
-//            .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
-//            .collect(Collectors.toList()));
-//        newDocument.setCreationDate(new Date());
-//        newDocument.setModificationDate(new Date());
-//        newDocument.setCreatedBy(new AdminUser("usmane@socgen.com"));
-//        newDocument.setModifiedBy(new AdminUser("usmane@socgen.com"));
-//
-//        documentRepository.saveDocument(newDocument);
-//        return newDocument;
-//    }
-//}
+———————
 
-package com.socgen.unibank.services.autotest.core.usecases;
 
-import com.socgen.unibank.domain.base.AdminUser;
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.core.DocumentRepository;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.EntityToDTOConverter;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderRepository;
-import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
-import com.socgen.unibank.services.autotest.model.usecases.CreateDocument;
+import org.springframework.web.multipart.MultipartFile;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreateDocumentEntryRequest {
+
+    private String name;
+    private String description;
+    private Long folderId;
+    private Map<String, String> metadata;
+
+    // Nouveau champ pour recevoir le fichier
+    private MultipartFile file;
+}
+
+
+
+
+
+
+
+————
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import com.socgen.unibank.domain.base.DocumentStatus;
-import java.util.Date;
-import java.util.stream.Collectors;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.core.sync.RequestBody;
+
+import java.util.UUID;
 
 @Service
 public class CreateDocumentImpl implements CreateDocument {
 
     private final DocumentRepository documentRepository;
     private final FolderRepository folderRepository;
+    private final S3Client s3Client; // Amazon S3 client
 
-    public CreateDocumentImpl(DocumentRepository documentRepository, FolderRepository folderRepository) {
+    @Value("${cloud.s3.bucket-name}")
+    private String bucketName;
+
+    public CreateDocumentImpl(DocumentRepository documentRepository, FolderRepository folderRepository, S3Client s3Client) {
         this.documentRepository = documentRepository;
         this.folderRepository = folderRepository;
+        this.s3Client = s3Client;
     }
 
     @Override
     public DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context) {
+        // 1. Upload fichier dans S3
+        String s3Url = uploadFileToS3(input.getFile());
+
+        // 2. Initialisation du nouveau document
         DocumentDTO newDocument = new DocumentDTO();
         newDocument.setName(input.getName());
         newDocument.setDescription(input.getDescription());
@@ -212,15 +90,39 @@ public class CreateDocumentImpl implements CreateDocument {
         newDocument.setModificationDate(new Date());
         newDocument.setCreatedBy(new AdminUser("usmane@socgen.com"));
         newDocument.setModifiedBy(new AdminUser("usmane@socgen.com"));
+        newDocument.setS3Url(s3Url); // Ajout de l'URL S3 dans l'objet DTO
 
+        // Gestion de la relation avec le folder
         if (input.getFolderId() != null) {
             FolderEntity folder = folderRepository.findById(input.getFolderId())
                 .orElseThrow(() -> new IllegalArgumentException("Folder not found"));
             newDocument.setFolder(EntityToDTOConverter.convertFolderEntityToDTO(folder));
         }
 
+        // 3. Sauvegarder dans la base de données
         documentRepository.saveDocument(newDocument);
         return newDocument;
+    }
+    
+    // Méthode pour uploader un fichier vers S3
+    private String uploadFileToS3(MultipartFile file) {
+        try {
+            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename(); // Générer un nom unique
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(fileName)
+                .build();
+            
+            PutObjectResponse response = s3Client.putObject(
+                putObjectRequest,
+                RequestBody.fromBytes(file.getBytes())
+            );
+            
+            // Construire l'URL publique du fichier (ajustez si votre bucket nécessite l'accès public)
+            return "https://" + bucketName + ".s3.amazonaws.com/" + fileName;
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'upload du fichier dans S3", e);
+        }
     }
 }
 
@@ -228,140 +130,78 @@ public class CreateDocumentImpl implements CreateDocument {
 
 
 
-liquibase ::
-<?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    <!-- ChangeSet for Folder table -->
-    <changeSet id="20231001-1" author="developer">
-        <createTable tableName="folder">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="name" type="VARCHAR(255)">
-                <constraints nullable="false" unique="true"/>
-            </column>
-            <column name="parent_folder_id" type="BIGINT"/>
-            <column name="creation_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modification_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modified_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
+————————
+@Operation(
+    summary = "Create a new document with file upload",
+    parameters = {
+        @Parameter(ref = "entityIdHeader", required = true),
+    }
+)
+@PostMapping(value = "/document", consumes = {"multipart/form-data"})
+@GraphQLQuery(name = "createDocumentWithFile")
+//@RolesAllowed(Permissions.IS_GUEST)
+@Override
+DocumentDTO handle(@RequestPart("file") MultipartFile file,
+                   @RequestPart("details") CreateDocumentEntryRequest input,
+                   @GraphQLRootContext @ModelAttribute RequestContext ctx);
 
-        <addForeignKeyConstraint
-            baseTableName="folder"
-            baseColumnNames="parent_folder_id"
-            referencedTableName="folder"
-            referencedColumnNames="id"
-            constraintName="fk_folder_parent"/>
-    </changeSet>
 
-    <!-- ChangeSet for Document table -->
-    <changeSet id="20231001-2" author="developer">
-        <createTable tableName="document">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="name" type="VARCHAR(255)">
-                <constraints nullable="false" unique="true"/>
-            </column>
-            <column name="description" type="VARCHAR(512)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="status" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="folder_id" type="BIGINT"/>
-            <column name="creation_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modification_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modified_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
 
-        <addForeignKeyConstraint
-            baseTableName="document"
-            baseColumnNames="folder_id"
-            referencedTableName="folder"
-            referencedColumnNames="id"
-            constraintName="fk_document_folder"/>
-    </changeSet>
 
-    <!-- ChangeSet for Metadata table -->
-    <changeSet id="20231001-3" author="developer">
-        <createTable tableName="metadata">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="document_id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="key" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="value" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
+—————
+@Entity
+@Table(name = "document")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentEntity {
 
-        <addForeignKeyConstraint
-            baseTableName="metadata"
-            baseColumnNames="document_id"
-            referencedTableName="document"
-            referencedColumnNames="id"
-            constraintName="fk_metadata_document"/>
-    </changeSet>
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    <!-- ChangeSet for DocumentVersion table -->
-    <changeSet id="20231001-4" author="developer">
-        <createTable tableName="document_version">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="document_id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="version_number" type="INT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="name" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="description" type="VARCHAR(512)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="creation_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
+    @Column(nullable = false, unique = true)
+    private String name;
 
-        <addForeignKeyConstraint
-            baseTableName="document_version"
-            baseColumnNames="document_id"
-            referencedTableName="document"
-            referencedColumnNames="id"
-            constraintName="fk_document_version_document"/>
-    </changeSet>
-</databaseChangeLog>
+    @Column(nullable = false)
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DocumentStatus status;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "creation_date", nullable = false)
+    private Date creationDate;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "modification_date", nullable = false)
+    private Date modificationDate;
+
+    @Column(nullable = false)
+    private String createdBy;
+
+    @Column(nullable = false)
+    private String modifiedBy;
+
+    @ManyToOne
+    @JoinColumn(name = "folder_id")
+    private FolderEntity folder;
+
+    // Ajout de l'URL S3
+    @Column(name = "s3_url", length = 2048)
+    private String s3Url;
+}
+
+
+
+
+———
+<changeSet id="20231002-1" author="developer">
+    <addColumn tableName="document">
+        <column name="s3_url" type="VARCHAR(2048)">
+            <constraints nullable="true"/>
+        </column>
+    </addColumn>
+</changeSet>
