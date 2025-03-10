@@ -1,181 +1,136 @@
-Voici mes entités ::
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-import com.socgen.unibank.platform.domain.URN;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import com.socgen.unibank.domain.base.DocumentStatus;
-import java.util.Date;
-import java.util.List;
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-@Entity
-@Table(name = "document")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class DocumentEntity {
+    <!-- ChangeSet for Folder table -->
+    <changeSet id="20231001-1" author="developer">
+        <createTable tableName="folder">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="parent_folder_id" type="BIGINT"/>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modification_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+        <addForeignKeyConstraint
+            baseTableName="folder"
+            baseColumnNames="parent_folder_id"
+            referencedTableName="folder"
+            referencedColumnNames="id"
+            constraintName="fk_folder_parent"/>
+    </changeSet>
 
-    @Column(nullable = false, unique = true)
-    private String name;
+    <!-- ChangeSet for Document table -->
+    <changeSet id="20231001-2" author="developer">
+        <createTable tableName="document">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="folder_id" type="BIGINT"/>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modification_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
 
-    @Column(nullable = false)
-    private String description;
+        <addForeignKeyConstraint
+            baseTableName="document"
+            baseColumnNames="folder_id"
+            referencedTableName="folder"
+            referencedColumnNames="id"
+            constraintName="fk_document_folder"/>
+    </changeSet>
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private DocumentStatus status;
+    <!-- ChangeSet for Metadata table -->
+    <changeSet id="20231001-3" author="developer">
+        <createTable tableName="metadata">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="key" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
 
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "document", orphanRemoval = true, fetch = FetchType.EAGER)
-    private List<MetaDataEntity> metadata;
+        <addForeignKeyConstraint
+            baseTableName="metadata"
+            baseColumnNames="document_id"
+            referencedTableName="document"
+            referencedColumnNames="id"
+            constraintName="fk_metadata_document"/>
+    </changeSet>
 
+    <!-- ChangeSet for DocumentVersion table -->
+    <changeSet id="20231001-4" author="developer">
+        <createTable tableName="document_version">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version_number" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
 
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "creation_date", nullable = false)
-    private Date creationDate;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "modification_date", nullable = false)
-    private Date modificationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
-
-    @Column(nullable = false)
-    private String modifiedBy;
-
-    @ManyToOne
-    @JoinColumn(name = "folder_id")
-    private FolderEntity folder;
-}
-
-
-
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.Date;
-
-@Entity
-@Table(name = "document_version")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class DocumentVersionEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "document_id", nullable = false)
-    private DocumentEntity document;
-
-    @Column(nullable = false)
-    private Integer versionNumber;
-
-    @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false)
-    private String description;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "creation_date", nullable = false)
-    private Date creationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
-}
-
-
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.Date;
-import java.util.List;
-
-@Entity
-@Table(name = "folder")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class FolderEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String name;
-
-    @ManyToOne
-    @JoinColumn(name = "parent_folder_id")
-    private FolderEntity parentFolder;
-
-    @OneToMany(mappedBy = "parentFolder", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    private List<FolderEntity> subFolders;
-
-    @OneToMany(mappedBy = "folder", cascade = CascadeType.ALL)
-    private List<DocumentEntity> documents;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(nullable = false)
-    private Date creationDate;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(nullable = false)
-    private Date modificationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
-
-    @Column(nullable = false)
-    private String modifiedBy;
-}
-
-
-
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Entity
-@Table(name = "metadata")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class MetaDataEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "document_id", nullable = false)
-    private DocumentEntity document;
-
-    @Column(nullable = false)
-    private String key;
-
-    @Column(nullable = false)
-    private String value;
-}
-
-
-crée moi les migration liquibase correspondants 
+        <addForeignKeyConstraint
+            baseTableName="document_version"
+            baseColumnNames="document_id"
+            referencedTableName="document"
+            referencedColumnNames="id"
+            constraintName="fk_document_version_document"/>
+    </changeSet>
+</databaseChangeLog>
