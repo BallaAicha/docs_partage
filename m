@@ -1,182 +1,45 @@
-Voici mes entités ::
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-import com.socgen.unibank.platform.domain.URN;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+Voici mes différentes parties de Code pour Document , en fait dans Document je veux gérer des fichiers que je vais stocker dans S3 , améliore Document en ajoutant les parties nécessaires pour le upload d'un fichier pour le stocker dans S3:
+
+DocumentDTO :
+package com.socgen.unibank.services.autotest.model.model;
+import com.socgen.unibank.domain.base.AdminUser;
 import com.socgen.unibank.domain.base.DocumentStatus;
+import com.socgen.unibank.platform.domain.Domain;
+import com.socgen.unibank.platform.domain.URN;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.util.Date;
 import java.util.List;
-
-@Entity
-@Table(name = "document")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class DocumentEntity {
+public class DocumentDTO {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String name;
-
-    @Column(nullable = false)
-    private String description;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private DocumentStatus status;
-
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "document", orphanRemoval = true, fetch = FetchType.EAGER)
-    private List<MetaDataEntity> metadata;
-
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "creation_date", nullable = false)
+    private Long documentId;
+   private String name;
+   private String description;
+   private DocumentStatus status;
+   private List<MetaDataDTO> metadata;
     private Date creationDate;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "modification_date", nullable = false)
     private Date modificationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
-
-    @Column(nullable = false)
-    private String modifiedBy;
-
-    @ManyToOne
-    @JoinColumn(name = "folder_id")
-    private FolderEntity folder;
+    private AdminUser createdBy;
+    private AdminUser modifiedBy;
+    private FolderDTO folder;  // Ajout du champ folder
 }
 
 
-
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.Date;
-import java.util.List;
-
-@Entity
-@Table(name = "folder")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class FolderEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String name;
-
-    @ManyToOne
-    @JoinColumn(name = "parent_folder_id")
-    private FolderEntity parentFolder;
-
-    @OneToMany(mappedBy = "parentFolder", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    private List<FolderEntity> subFolders;
-
-    @OneToMany(mappedBy = "folder", cascade = CascadeType.ALL)
-    private List<DocumentEntity> documents;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(nullable = false)
-    private Date creationDate;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(nullable = false)
-    private Date modificationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
-
-    @Column(nullable = false)
-    private String modifiedBy;
+UseCases ::
+package com.socgen.unibank.services.autotest.model.usecases;
+import com.socgen.unibank.platform.domain.Command;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+public interface CreateDocument  extends Command {
+    DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context);
 }
 
 
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.Date;
-
-@Entity
-@Table(name = "document_version")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class DocumentVersionEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "document_id", nullable = false)
-    private DocumentEntity document;
-
-    @Column(nullable = false)
-    private Integer versionNumber;
-
-    @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false)
-    private String description;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "creation_date", nullable = false)
-    private Date creationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
-}
-
-
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Entity
-@Table(name = "metadata")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class MetaDataEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "document_id", nullable = false)
-    private DocumentEntity document;
-
-    @Column(nullable = false)
-    private String key;
-
-    @Column(nullable = false)
-    private String value;
-}
-
-Voici mon Api ::
 package com.socgen.unibank.services.autotest.model;
 import com.socgen.unibank.platform.models.RequestContext;
 import com.socgen.unibank.services.autotest.model.model.*;
@@ -263,208 +126,242 @@ public interface DocumentAPI extends GetDocumentList, CreateDocument , GetDocume
 }
 
 
-Question :: pouruoi tous mes endopoints fonctionne sauf :
- @Operation
-        (summary = "Get list of folders",
-            parameters = {
-                @Parameter(ref = "entityIdHeader", required = true),
-
-            }
-        )
-    @GetMapping("/folders")
-    @Override
-    List<FolderDTO> handle(GetFolderRequest input, @ModelAttribute RequestContext ctx);  
 
 
-Voici ma logique ::
+Implémentation ::
 //package com.socgen.unibank.services.autotest.core.usecases;
 //
+//import com.socgen.unibank.domain.base.AdminUser;
 //import com.socgen.unibank.platform.models.RequestContext;
-//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
-//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderRepository;
+//import com.socgen.unibank.services.autotest.core.DocumentRepository;
+//import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
 //import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-//import com.socgen.unibank.services.autotest.model.model.FolderDTO;
-//import com.socgen.unibank.services.autotest.model.model.GetFolderRequest;
 //import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
-//import com.socgen.unibank.services.autotest.model.usecases.GetFolder;
-//import lombok.AllArgsConstructor;
+//import com.socgen.unibank.services.autotest.model.usecases.CreateDocument;
 //import org.springframework.stereotype.Service;
-//
-//import java.util.List;
+//import com.socgen.unibank.domain.base.DocumentStatus;
+//import java.util.Date;
 //import java.util.stream.Collectors;
 //
-//@AllArgsConstructor
 //@Service
-//public class GetFolderImpl implements GetFolder {
+//public class CreateDocumentImpl implements CreateDocument {
 //
-//    private final FolderRepository folderRepository;
+//    private final DocumentRepository documentRepository;
+//
+//    public CreateDocumentImpl(DocumentRepository documentRepository) {
+//        this.documentRepository = documentRepository;
+//    }
 //
 //    @Override
-//    public List<FolderDTO> handle(GetFolderRequest input, RequestContext context) {
-//        List<FolderEntity> folders = input.getFolderId() != null
-//            ? List.of(folderRepository.findById(input.getFolderId()).orElseThrow(() -> new IllegalArgumentException("Folder not found")))
-//            : folderRepository.findAll();
+//    public DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context) {
+//        DocumentDTO newDocument = new DocumentDTO();
+//        newDocument.setName(input.getName());
+//        newDocument.setDescription(input.getDescription());
+//        newDocument.setStatus(DocumentStatus.CREATED);
+//        newDocument.setMetadata(input.getMetadata().entrySet().stream()
+//            .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
+//            .collect(Collectors.toList()));
+//        newDocument.setCreationDate(new Date());
+//        newDocument.setModificationDate(new Date());
+//        newDocument.setCreatedBy(new AdminUser("usmane@socgen.com"));
+//        newDocument.setModifiedBy(new AdminUser("usmane@socgen.com"));
 //
-//        return folders.stream()
-//            .map(folder -> new FolderDTO(
-//                folder.getId(),
-//                folder.getName(),
-//                folder.getParentFolder() != null ? folder.getParentFolder().getId() : null,
-//                folder.getCreationDate(),
-//                folder.getModificationDate(),
-//                folder.getCreatedBy(),
-//                folder.getModifiedBy(),
-//                folder.getDocuments() != null ? folder.getDocuments().stream() // Conversion de documents liés
-//                    .map(document -> new DocumentDTO(
-//                        document.getId(),
-//                        document.getName(),
-//                        document.getDescription(),
-//                        document.getStatus(),
-//                        document.getMetadata() != null ? document.getMetadata().stream()
-//                            .map(meta -> new MetaDataDTO(
-//                                meta.getKey(),
-//                                meta.getValue()
-//                            )).collect(Collectors.toList()) : null,
-//                        document.getCreationDate(),
-//                        document.getModificationDate(),
-//                        null,
-//                        null
-//                    )).collect(Collectors.toList()) : null,
-//                folder.getSubFolders() != null ? folder.getSubFolders().stream() // Conversion de sous-dossiers
-//                    .map(subFolder -> new FolderDTO(
-//                        subFolder.getId(),
-//                        subFolder.getName(),
-//                        subFolder.getParentFolder() != null ? subFolder.getParentFolder().getId() : null,
-//                        subFolder.getCreationDate(),
-//                        subFolder.getModificationDate(),
-//                        subFolder.getCreatedBy(),
-//                        subFolder.getModifiedBy(),
-//                        null, // Assuming sub-folder documents are not needed here
-//                        null  // Assuming sub-folder sub-folders are not needed here
-//                    )).collect(Collectors.toList()) : null
-//            ))
-//            .collect(Collectors.toList());
+//        documentRepository.saveDocument(newDocument);
+//        return newDocument;
 //    }
 //}
-
 
 package com.socgen.unibank.services.autotest.core.usecases;
 
 import com.socgen.unibank.domain.base.AdminUser;
 import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.core.DocumentRepository;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.EntityToDTOConverter;
 import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
 import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderRepository;
+import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
 import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-import com.socgen.unibank.services.autotest.model.model.FolderDTO;
-import com.socgen.unibank.services.autotest.model.model.GetFolderRequest;
 import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
-import com.socgen.unibank.services.autotest.model.usecases.GetFolder;
-import lombok.AllArgsConstructor;
+import com.socgen.unibank.services.autotest.model.usecases.CreateDocument;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import java.util.Date;
 import java.util.stream.Collectors;
 
-@AllArgsConstructor
 @Service
-public class GetFolderImpl implements GetFolder {
+public class CreateDocumentImpl implements CreateDocument {
 
+    private final DocumentRepository documentRepository;
     private final FolderRepository folderRepository;
 
-    @Override
-    public List<FolderDTO> handle(GetFolderRequest input, RequestContext context) {
-        List<FolderEntity> folders = input.getFolderId() != null
-            ? List.of(folderRepository.findById(input.getFolderId()).orElseThrow(() -> new IllegalArgumentException("Folder not found")))
-            : folderRepository.findAll();
+    public CreateDocumentImpl(DocumentRepository documentRepository, FolderRepository folderRepository) {
+        this.documentRepository = documentRepository;
+        this.folderRepository = folderRepository;
+    }
 
-        return folders.stream()
-            .map(folder -> new FolderDTO(
-                folder.getId(),
-                folder.getName(),
-                folder.getParentFolder() != null ? folder.getParentFolder().getId() : null,
-                folder.getCreationDate(),
-                folder.getModificationDate(),
-                folder.getCreatedBy(),
-                folder.getModifiedBy(),
-                folder.getDocuments() != null ? folder.getDocuments().stream()
-                    .map(document -> new DocumentDTO(
-                        document.getId(),
-                        document.getName(),
-                        document.getDescription(),
-                        document.getStatus(),
-                        document.getMetadata() != null ? document.getMetadata().stream()
-                            .map(meta -> new MetaDataDTO(
-                                meta.getKey(),
-                                meta.getValue()
-                            )).collect(Collectors.toList()) : null,
-                        document.getCreationDate(),
-                        document.getModificationDate(),
-                        document.getCreatedBy() != null ? new AdminUser(document.getCreatedBy()) : null, // Assuming AdminUser has a constructor that takes a String
-                        document.getModifiedBy() != null ? new AdminUser(document.getModifiedBy()) : null, // Assuming AdminUser has a constructor that takes a String
-                        null // Assuming folder field in DocumentDTO is not necessary here
-                    )).collect(Collectors.toList()) : null,
-                folder.getSubFolders() != null ? folder.getSubFolders().stream()
-                    .map(subFolder -> new FolderDTO(
-                        subFolder.getId(),
-                        subFolder.getName(),
-                        subFolder.getParentFolder() != null ? subFolder.getParentFolder().getId() : null,
-                        subFolder.getCreationDate(),
-                        subFolder.getModificationDate(),
-                        subFolder.getCreatedBy(),
-                        subFolder.getModifiedBy(),
-                        null, // Assuming sub-folder documents are not needed here
-                        null  // Assuming sub-folder sub-folders are not needed here
-                    )).collect(Collectors.toList()) : null
-            ))
-            .collect(Collectors.toList());
+    @Override
+    public DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context) {
+        DocumentDTO newDocument = new DocumentDTO();
+        newDocument.setName(input.getName());
+        newDocument.setDescription(input.getDescription());
+        newDocument.setStatus(DocumentStatus.CREATED);
+        newDocument.setMetadata(input.getMetadata().entrySet().stream()
+            .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
+            .collect(Collectors.toList()));
+        newDocument.setCreationDate(new Date());
+        newDocument.setModificationDate(new Date());
+        newDocument.setCreatedBy(new AdminUser("usmane@socgen.com"));
+        newDocument.setModifiedBy(new AdminUser("usmane@socgen.com"));
+
+        if (input.getFolderId() != null) {
+            FolderEntity folder = folderRepository.findById(input.getFolderId())
+                .orElseThrow(() -> new IllegalArgumentException("Folder not found"));
+            newDocument.setFolder(EntityToDTOConverter.convertFolderEntityToDTO(folder));
+        }
+
+        documentRepository.saveDocument(newDocument);
+        return newDocument;
     }
 }
 
 
-voici mon erreur ::
-at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:135)
-	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131)
-	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85)
-	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:187)
-	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:174)
-	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:135)
-	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
-	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:187)
-	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:174)
-	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:135)
-	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179)
-	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:187)
-	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:174)
-	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:135)
-	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
-	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:187)
-	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:174)
-	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:135)
-	at com.socgen.unibank.platform.springboot.config.web.RequestFilter.doFilterInternal(RequestFilter.java:131)
-	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
-	...
-Caused by: java.lang.reflect.InvocationTargetException
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
-	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
-	at com.socgen.unibank.platform.springboot.config.UseCaseMapping.handle(UseCaseMapping.java:65)
-	at com.socgen.unibank.platform.springboot.config.web.ControllersConfig.lambda$configureEndpoints$1(ControllersConfig.java:192)
-	... 127 more
-Caused by: org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity.documents: could not initialize proxy - no Session
-	at org.hibernate.collection.spi.AbstractPersistentCollection.throwLazyInitializationException(AbstractPersistentCollection.java:635)
-	at org.hibernate.collection.spi.AbstractPersistentCollection.withTemporarySessionIfNeeded(AbstractPersistentCollection.java:218)
-	at org.hibernate.collection.spi.AbstractPersistentCollection.initialize(AbstractPersistentCollection.java:615)
-	at org.hibernate.collection.spi.AbstractPersistentCollection.read(AbstractPersistentCollection.java:136)
-	at org.hibernate.collection.spi.PersistentBag.iterator(PersistentBag.java:366)
-	at java.base/java.util.Spliterators$IteratorSpliterator.estimateSize(Spliterators.java:1865)
-	at java.base/java.util.Spliterator.getExactSizeIfKnown(Spliterator.java:414)
-	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:508)
-	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
-	at java.base/java.util.stream.ReduceOps$ReduceOp.evaluateSequential(ReduceOps.java:921)
-	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
-	at java.base/java.util.stream.ReferencePipeline.collect(ReferencePipeline.java:682)
-	at com.socgen.unibank.services.autotest.core.usecases.GetFolderImpl.lambda$handle$4(GetFolderImpl.java:126)
-	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
-	...
-	at com.socgen.unibank.services.autotest.core.usecases.GetFolderImpl.handle(GetFolderImpl.java:140)
+
+
+
+liquibase ::
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <!-- ChangeSet for Folder table -->
+    <changeSet id="20231001-1" author="developer">
+        <createTable tableName="folder">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="parent_folder_id" type="BIGINT"/>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modification_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="folder"
+            baseColumnNames="parent_folder_id"
+            referencedTableName="folder"
+            referencedColumnNames="id"
+            constraintName="fk_folder_parent"/>
+    </changeSet>
+
+    <!-- ChangeSet for Document table -->
+    <changeSet id="20231001-2" author="developer">
+        <createTable tableName="document">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="folder_id" type="BIGINT"/>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modification_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="document"
+            baseColumnNames="folder_id"
+            referencedTableName="folder"
+            referencedColumnNames="id"
+            constraintName="fk_document_folder"/>
+    </changeSet>
+
+    <!-- ChangeSet for Metadata table -->
+    <changeSet id="20231001-3" author="developer">
+        <createTable tableName="metadata">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="key" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="metadata"
+            baseColumnNames="document_id"
+            referencedTableName="document"
+            referencedColumnNames="id"
+            constraintName="fk_metadata_document"/>
+    </changeSet>
+
+    <!-- ChangeSet for DocumentVersion table -->
+    <changeSet id="20231001-4" author="developer">
+        <createTable tableName="document_version">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version_number" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="document_version"
+            baseColumnNames="document_id"
+            referencedTableName="document"
+            referencedColumnNames="id"
+            constraintName="fk_document_version_document"/>
+    </changeSet>
+</databaseChangeLog>
