@@ -157,3 +157,25 @@ public class CreateDocumentImpl implements CreateDocument {
         </column>
     </addColumn>
 </changeSet>
+
+
+
+package com.socgen.unibank.services.autotest.model.model;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.util.List;
+import java.util.Map;
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreateDocumentEntryRequest {
+    private String name;
+    private String description;
+    private Map<String, String> metadata;
+    private List<String> tags;
+    private Long folderId;
+
+
+}
+
