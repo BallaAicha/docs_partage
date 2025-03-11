@@ -1,315 +1,43 @@
-package com.socgen.unibank.services.autotest.model.model;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.Date;
-import java.util.List;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class FolderDTO {
-    private Long id;
-    private String name;
-    private Long parentFolderId; // ID du dossier parent pour gérer les hiérarchies
-    private Date creationDate;
-    private Date modificationDate;
-    private String createdBy;
-    private String modifiedBy;
-    private List<DocumentDTO> documents; // Liste des documents dans ce dossier
-    private List<FolderDTO> subFolders; // Liste des sous-dossiers
-}
-
-
-
-———————
-
-package com.socgen.unibank.services.autotest.model.model;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class CreateFolderRequest {
-    private String name;           // Nom du dossier
-    private Long parentFolderId;   // Optionnel, pour définir le dossier parent
-    private String createdBy;      // Identifiant de l'utilisateur créant ce dossier
-}
-
-
-
-package com.socgen.unibank.services.autotest.model.model;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class GetFolderRequest {
-    private Long folderId; // Recherche par ID du dossier
-}
-
-
-
-
-package com.socgen.unibank.services.autotest.model.usecases;
-
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.model.model.CreateFolderRequest;
-import com.socgen.unibank.services.autotest.model.model.FolderDTO;
-
-public interface CreateFolder {
-    FolderDTO handle(CreateFolderRequest input, RequestContext context);
-}
-
-
-
-package com.socgen.unibank.services.autotest.model.usecases;
-
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.model.model.FolderDTO;
-import com.socgen.unibank.services.autotest.model.model.GetFolderRequest;
-
-import java.util.List;
-
-public interface GetFolder {
-    List<FolderDTO> handle(GetFolderRequest input, RequestContext context);
-}
-
-
-
-
-package com.socgen.unibank.services.autotest.model;
-
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.model.model.*;
-import com.socgen.unibank.services.autotest.model.usecases.CreateFolder;
-import com.socgen.unibank.services.autotest.model.usecases.GetFolder;
-import io.swagger.v3.oas.annotations.Operation;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
-@RequestMapping(name = "folders", produces = "application/json")
-public interface FolderAPI extends GetFolder, CreateFolder {
-
-    @Operation(summary = "Get list of folders")
-    @GetMapping("/folders")
-    @Override
-    List<FolderDTO> handle(GetFolderRequest input, @ModelAttribute RequestContext ctx);
-
-    @Operation(summary = "Create a new folder")
-    @PostMapping("/folder")
-    @Override
-    FolderDTO handle(@RequestBody CreateFolderRequest input, @ModelAttribute RequestContext ctx);
-}
-
-
-
-
-
-package com.socgen.unibank.services.autotest.core.usecases;
-
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.core.FolderRepository;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
-import com.socgen.unibank.services.autotest.model.model.CreateFolderRequest;
-import com.socgen.unibank.services.autotest.model.model.FolderDTO;
-import com.socgen.unibank.services.autotest.model.usecases.CreateFolder;
-import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.Date;
-
-@AllArgsConstructor
-@Service
-public class CreateFolderImpl implements CreateFolder {
-
-    private final FolderRepository folderRepository;
-
-    @Override
-    public FolderDTO handle(CreateFolderRequest input, RequestContext context) {
-        FolderEntity folderEntity = new FolderEntity();
-        folderEntity.setName(input.getName());
-        folderEntity.setCreatedBy(input.getCreatedBy());
-        folderEntity.setCreationDate(new Date());
-        folderEntity.setModificationDate(new Date());
-
-        // Définir le dossier parent, si disponible
-        if (input.getParentFolderId() != null) {
-            FolderEntity parentFolder = folderRepository.findById(input.getParentFolderId())
-                .orElseThrow(() -> new IllegalArgumentException("Parent folder not found"));
-            folderEntity.setParentFolder(parentFolder);
-        }
-
-        FolderEntity savedFolder = folderRepository.save(folderEntity);
-        return new FolderDTO(
-            savedFolder.getId(),
-            savedFolder.getName(),
-            savedFolder.getParentFolder() != null ? savedFolder.getParentFolder().getId() : null,
-            savedFolder.getCreationDate(),
-            savedFolder.getModificationDate(),
-            savedFolder.getCreatedBy(),
-            savedFolder.getModifiedBy(),
-            null,
-            null
-        );
-    }
-}
-
-
-
-
-package com.socgen.unibank.services.autotest.core.usecases;
-
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.core.FolderRepository;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
-import com.socgen.unibank.services.autotest.model.model.FolderDTO;
-import com.socgen.unibank.services.autotest.model.model.GetFolderRequest;
-import com.socgen.unibank.services.autotest.model.usecases.GetFolder;
-import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
-
-@AllArgsConstructor
-@Service
-public class GetFolderImpl implements GetFolder {
-
-    private final FolderRepository folderRepository;
-
-    @Override
-    public List<FolderDTO> handle(GetFolderRequest input, RequestContext context) {
-        List<FolderEntity> folders = input.getFolderId() != null
-            ? List.of(folderRepository.findById(input.getFolderId()).orElseThrow(() -> new IllegalArgumentException("Folder not found")))
-            : folderRepository.findAll();
-
-        return folders.stream()
-            .map(folder -> new FolderDTO(
-                folder.getId(),
-                folder.getName(),
-                folder.getParentFolder() != null ? folder.getParentFolder().getId() : null,
-                folder.getCreationDate(),
-                folder.getModificationDate(),
-                folder.getCreatedBy(),
-                folder.getModifiedBy(),
-                folder.getDocuments() != null ? folder.getDocuments().stream() // Conversion de documents liés
-                    .map(document -> {
-                        // ... map DocumentEntity to DocumentDTO
-                    }).collect(Collectors.toList()) : null,
-                folder.getSubFolders() != null ? folder.getSubFolders().stream() // Conversion de sous-dossiers
-                    .map(subFolder -> {
-                        // ... map FolderEntity to FolderDTO
-                    }).collect(Collectors.toList()) : null
-            ))
-            .collect(Collectors.toList());
-    }
-}
-
-
-
-
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.Date;
-import java.util.List;
-
-@Entity
-@Table(name = "folder")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class FolderEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String name;
-
-    @ManyToOne
-    @JoinColumn(name = "parent_folder_id")
-    private FolderEntity parentFolder;
-
-    @OneToMany(mappedBy = "parentFolder", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<FolderEntity> subFolders;
-
-    @OneToMany(mappedBy = "folder", cascade = CascadeType.ALL) // Documents associés
-    private List<DocumentEntity> documents;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(nullable = false)
-    private Date creationDate;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(nullable = false)
-    private Date modificationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
-
-    @Column(nullable = false)
-    private String modifiedBy;
-}
-
-
-
-package com.socgen.unibank.services.autotest.core;
-
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-public interface FolderRepository extends JpaRepository<FolderEntity, Long> {}
-
-
-
-
-
-Liquidate :::
-
-
-
-<changeSet id="4" author="Ousmane">
-    <createTable tableName="folder">
-        <column name="id" type="BIGINT" autoIncrement="true">
-            <constraints primaryKey="true"/>
-        </column>
-        <column name="name" type="VARCHAR(255)">
-            <constraints nullable="false" unique="true"/>
-        </column>
-        <column name="parent_folder_id" type="BIGINT"/>
-        <column name="creation_date" type="TIMESTAMP">
-            <constraints nullable="false"/>
-        </column>
-        <column name="modification_date" type="TIMESTAMP">
-            <constraints nullable="false"/>
-        </column>
-        <column name="created_by" type="VARCHAR(255)">
-            <constraints nullable="false"/>
-        </column>
-        <column name="modified_by" type="VARCHAR(255)">
-            <constraints nullable="false"/>
-        </column>
-    </createTable>
-
-    <addForeignKeyConstraint baseColumnNames="parent_folder_id"
-                             baseTableName="folder"
-                             referencedColumnNames="id"
-                             referencedTableName="folder"
-                             constraintName="fk_folder_parent"/>
-</changeSet>
+Subject: Designing and developing a document management platform and project generator for standardized Spring projects adhering to enterprise development norms.
+Currently, the development team is encountering several limitations and challenges related to managing internal development standards and the associated documentation:
+Current Problems:
+1. Lack of centralized business documents: Development standards (frameworks, configurations, testing, security, dependencies, etc.) are scattered and managed as static files in formats like Word or PDF. This creates challenges in:
+    * Version control and tracking historical changes.
+    * Updating and maintaining documents effectively.
+2. Lack of standardization: Onboarding a new developer is challenging since no standardized tools are available to quickly start with best practices.
+3. Need for auto-generation of standardized projects: When starting new Spring projects, developers must manually adhere to all defined standards, especially in terms of architecture (e.g., hexagonal) and required internal dependencies. An automated project generator that complies with internal norms would simplify this process and ensure deliverables conform to standards.
+
+Primary Objective The overarching goal is to design and develop a centralized, turnkey platform to:
+1. Document Management System (CRUD operations):
+    * File management (add, view).
+    * Advanced versioning of documents.
+    * Metadata-based search functionality.
+    * Modification history tracking.
+    * Hierarchical folder organization and management.
+2. Automatic Project Generation: Allow automatic generation of Spring Boot projects that fully align with internal development standards by following a predefined architecture and integrating required internal dependencies.
+
+Focus for Now: Improving the Document Management Backend
+I have already created parts of the backend adhering to company development standards. I'll share portions of the backend code for you to improve and add features to make the platform more advanced and modern while respecting the existing code structure.
+Below is the current functionality for document management:
+1. The developer begins by creating a folder.
+2. Inside the folder, the developer can create a document.
+3. The current code, however, does not yet support file uploads when creating a document. This upload functionality needs to be integrated.
+4. Once created, users need to be able to:
+    * View documents.
+    * Read them directly in the browser.
+    * Download them.
+
+Requirements:
+Your task is to suggest and implement enhancements and additional advanced features to make this a highly modern Document Management platform. If you think of any attributes or methods that could further improve performance and functionality, feel free to propose and integrate them. This is an important test, and delivering a successful, advanced solution will significantly impact the outcome for me.
+Key Enhancements to Focus on:
+1. Add file upload capabilities (e.g., PDFs, images, etc.) when creating a document. Ensure the uploaded file is linked to the created document in the database.
+2. Develop functionality for users to:
+    * View uploaded files in-browser (e.g., PDFs rendered in the browser).
+    * Download documents directly.
+3. Incorporate improved advanced features like:
+    * Sophisticated versioning: Track multiple versions of a document with detailed metadata for each version (e.g., who uploaded it, timestamp, and version-specific comments).
+    * Enhanced metadata management: Allow tagging, categories, or custom metadata fields for classification and powerful search capabilities.
+    * Folder permissions: Define hierarchical or role-based access control for folders and their documents.
+    * Activity logging: Create logs for all actions on documents (e.g., uploads, accesses, downloads, deletions), including timestamps.
+    * Integration of full-text search into documents (e.g., indexing file contents for text-based queries if applicable).
+4. If you think of any additional attributes, functionalities, or backend optimizations that could add significant value to the platform, include them. The goal is to make this platform as advanced, comprehensive, and efficient as possible.
