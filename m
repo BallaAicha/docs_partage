@@ -160,7 +160,8 @@ public class CreateDocumentImpl implements CreateDocument {
 
 
 
-Met à jour ici car tu as ajouté d'autres champs dans DocumentDTO //
+
+
 
 package com.socgen.unibank.services.autotest.core.usecases;
 
@@ -213,9 +214,13 @@ public class GetFolderImpl implements GetFolder {
                             )).collect(Collectors.toList()) : null,
                         document.getCreationDate(),
                         document.getModificationDate(),
-                        document.getCreatedBy() != null ? new AdminUser(document.getCreatedBy()) : null, // Assuming AdminUser has a constructor that takes a String
-                        document.getModifiedBy() != null ? new AdminUser(document.getModifiedBy()) : null, // Assuming AdminUser has a constructor that takes a String
-                        null // Assuming folder field in DocumentDTO is not necessary here
+                        document.getCreatedBy() != null ? new AdminUser(document.getCreatedBy()) : null,
+                        document.getModifiedBy() != null ? new AdminUser(document.getModifiedBy()) : null,
+                        null, // folder reference
+                        document.getFilePath(), // Added file path
+                        document.getFileSize(), // Added file size
+                        document.getFileType(), // Added file type
+                        document.getTags() != null ? document.getTags() : null // Added tags
                     )).collect(Collectors.toList()) : null,
                 folder.getSubFolders() != null ? folder.getSubFolders().stream()
                     .map(subFolder -> new FolderDTO(
@@ -233,3 +238,4 @@ public class GetFolderImpl implements GetFolder {
             .collect(Collectors.toList());
     }
 }
+
