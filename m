@@ -160,22 +160,76 @@ public class CreateDocumentImpl implements CreateDocument {
 
 
 
-package com.socgen.unibank.services.autotest.model.model;
+Met à jour ici car tu as ajouté d'autres champs dans DocumentDTO //
+
+package com.socgen.unibank.services.autotest.core.usecases;
+
+import com.socgen.unibank.domain.base.AdminUser;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderRepository;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.model.FolderDTO;
+import com.socgen.unibank.services.autotest.model.model.GetFolderRequest;
+import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
+import com.socgen.unibank.services.autotest.model.usecases.GetFolder;
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
-import java.util.Map;
-@Data
-@NoArgsConstructor
+import java.util.stream.Collectors;
+
 @AllArgsConstructor
-public class CreateDocumentEntryRequest {
-    private String name;
-    private String description;
-    private Map<String, String> metadata;
-    private List<String> tags;
-    private Long folderId;
+@Service
+public class GetFolderImpl implements GetFolder {
 
+    private final FolderRepository folderRepository;
 
+    @Override
+    public List<FolderDTO> handle(GetFolderRequest input, RequestContext context) {
+        List<FolderEntity> folders = input.getFolderId() != null
+            ? List.of(folderRepository.findById(input.getFolderId()).orElseThrow(() -> new IllegalArgumentException("Folder not found")))
+            : folderRepository.findAll();
+
+        return folders.stream()
+            .map(folder -> new FolderDTO(
+                folder.getId(),
+                folder.getName(),
+                folder.getParentFolder() != null ? folder.getParentFolder().getId() : null,
+                folder.getCreationDate(),
+                folder.getModificationDate(),
+                folder.getCreatedBy(),
+                folder.getModifiedBy(),
+                folder.getDocuments() != null ? folder.getDocuments().stream()
+                    .map(document -> new DocumentDTO(
+                        document.getId(),
+                        document.getName(),
+                        document.getDescription(),
+                        document.getStatus(),
+                        document.getMetadata() != null ? document.getMetadata().stream()
+                            .map(meta -> new MetaDataDTO(
+                                meta.getKey(),
+                                meta.getValue()
+                            )).collect(Collectors.toList()) : null,
+                        document.getCreationDate(),
+                        document.getModificationDate(),
+                        document.getCreatedBy() != null ? new AdminUser(document.getCreatedBy()) : null, // Assuming AdminUser has a constructor that takes a String
+                        document.getModifiedBy() != null ? new AdminUser(document.getModifiedBy()) : null, // Assuming AdminUser has a constructor that takes a String
+                        null // Assuming folder field in DocumentDTO is not necessary here
+                    )).collect(Collectors.toList()) : null,
+                folder.getSubFolders() != null ? folder.getSubFolders().stream()
+                    .map(subFolder -> new FolderDTO(
+                        subFolder.getId(),
+                        subFolder.getName(),
+                        subFolder.getParentFolder() != null ? subFolder.getParentFolder().getId() : null,
+                        subFolder.getCreationDate(),
+                        subFolder.getModificationDate(),
+                        subFolder.getCreatedBy(),
+                        subFolder.getModifiedBy(),
+                        null, // Assuming sub-folder documents are not needed here
+                        null  // Assuming sub-folder sub-folders are not needed here
+                    )).collect(Collectors.toList()) : null
+            ))
+            .collect(Collectors.toList());
+    }
 }
-
