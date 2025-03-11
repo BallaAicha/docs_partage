@@ -1,6 +1,8 @@
+Pour ce code ::
 package com.socgen.unibank.services.autotest.core.usecases;
 
 import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.core.usecases.DocumentUploadHelper;
 import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
 import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
 import io.leangen.graphql.annotations.GraphQLRootContext;
@@ -42,15 +44,10 @@ public class DocumentController {
         request.setDescription(description);
         request.setMetadata(metadata);
         request.setFolderId(folderId);
-        
+
         return documentUploadHelper.uploadDocument(file, request, context);
     }
 }
-
-
-
-————————
-
 
 
 package com.socgen.unibank.services.autotest.core.usecases;
@@ -119,17 +116,19 @@ public class DocumentUploadHelper {
 
         } catch (Exception e) {
             log.error("Error uploading document", e);
-            throw new TechnicalException("UPLOAD_ERROR", "Error uploading document: " + e.getMessage());
+
+            throw new IllegalArgumentException(" Error uploading document: " + e.getMessage());
+
         }
     }
 
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new TechnicalException("FILE_REQUIRED", "File is required");
+            throw new IllegalArgumentException("File is null or empty");
         }
 
         if (!file.getContentType().equals("application/pdf")) {
-            throw new TechnicalException("INVALID_FILE_TYPE", "Only PDF files are allowed");
+            throw new IllegalArgumentException("Invalid file type Only PDF files are allowed");
         }
     }
 
@@ -138,15 +137,15 @@ public class DocumentUploadHelper {
         newDocument.setName(input.getName());
         newDocument.setDescription(input.getDescription());
         newDocument.setStatus(DocumentStatus.CREATED);
-        newDocument.setMetadata(input.getMetadata() != null ? 
+        newDocument.setMetadata(input.getMetadata() != null ?
             input.getMetadata().entrySet().stream()
                 .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
-                .collect(Collectors.toList()) : 
+                .collect(Collectors.toList()) :
             new ArrayList<>());
         newDocument.setCreationDate(new Date());
         newDocument.setModificationDate(new Date());
-        newDocument.setCreatedBy(new AdminUser(context.getUsername()));
-        newDocument.setModifiedBy(new AdminUser(context.getUsername()));
+        newDocument.setCreatedBy(new AdminUser("usmane@gmail.com"));
+        newDocument.setModifiedBy(new AdminUser("usmane@gmail.com"));
         newDocument.setFilePath(objectName);
         newDocument.setFileName(file.getOriginalFilename());
         return newDocument;
@@ -155,9 +154,22 @@ public class DocumentUploadHelper {
     private String generateObjectName(String originalFilename, RequestContext context) {
         return String.format("documents/%s/%s/%s_%s",
             context.getEntityId().get().name(),
-            context.getUsername(),
+            //context.getUsername(),
             UUID.randomUUID().toString(),
             originalFilename
         );
     }
 }
+
+
+Quand je upload un fichier pdf je vois cette erreur :
+2025-03-11T13:27:29.176Z ERROR [unibank-service-auto-test,,] 14672 --- [nio-8082-exec-9] s.c.w.RestResponseEntityExceptionHandler :  Error uploading document: Format specifier '%s'
+2025-03-11T13:27:29.179Z ERROR [unibank-service-auto-test,,] 14672 --- [nio-8082-exec-9] s.c.w.RestResponseEntityExceptionHandler : 
+java.lang.IllegalArgumentException:  Error uploading document: Format specifier '%s'
+	at com.socgen.unibank.services.autotest.core.usecases.DocumentUploadHelper.uploadDocument(DocumentUploadHelper.java:68)
+	at com.socgen.unibank.services.autotest.core.usecases.DocumentController.uploadDocument(DocumentController.java:47)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	...
+	at com.socgen.unibank.platform.springboot.config.web.RequestFilter.doFilterInternal(RequestFilter.java:131)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	...
