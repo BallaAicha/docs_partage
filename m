@@ -1,3 +1,345 @@
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
+import com.socgen.unibank.platform.domain.URN;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import java.util.Date;
+import java.util.List;
+
+@Entity
+@Table(name = "document")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String name;
+
+    @Column(nullable = false)
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DocumentStatus status;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "document", orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<MetaDataEntity> metadata;
+
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "creation_date", nullable = false)
+    private Date creationDate;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "modification_date", nullable = false)
+    private Date modificationDate;
+
+    @Column(nullable = false)
+    private String createdBy;
+
+    @Column(nullable = false)
+    private String modifiedBy;
+
+    @ManyToOne
+    @JoinColumn(name = "folder_id")
+    private FolderEntity folder;
+
+    @Column(name = "file_path")
+    private String filePath;
+
+    @Column(name = "file_name")
+    private String fileName;
+
+
+}
+
+
+
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Date;
+
+@Entity
+@Table(name = "document_version")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentVersionEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "document_id", nullable = false)
+    private DocumentEntity document;
+
+    @Column(nullable = false)
+    private Integer versionNumber;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false)
+    private String description;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "creation_date", nullable = false)
+    private Date creationDate;
+
+    @Column(nullable = false)
+    private String createdBy;
+}
+
+
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Date;
+import java.util.List;
+
+@Entity
+@Table(name = "folder")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class FolderEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String name;
+
+    @ManyToOne
+    @JoinColumn(name = "parent_folder_id")
+    private FolderEntity parentFolder;
+
+    @OneToMany(mappedBy = "parentFolder", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<FolderEntity> subFolders;
+
+    @OneToMany(mappedBy = "folder", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<DocumentEntity> documents;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(nullable = false)
+    private Date creationDate;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(nullable = false)
+    private Date modificationDate;
+
+    @Column(nullable = false)
+    private String createdBy;
+
+    @Column(nullable = false)
+    private String modifiedBy;
+}
+
+
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "metadata")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class MetaDataEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "document_id", nullable = false)
+    private DocumentEntity document;
+
+    @Column(nullable = false)
+    private String key;
+
+    @Column(nullable = false)
+    private String value;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+usecases ::
+//package com.socgen.unibank.services.autotest.core.usecases;
+//
+//import com.socgen.unibank.domain.base.AdminUser;
+//import com.socgen.unibank.domain.base.DocumentStatus;
+//import com.socgen.unibank.platform.exceptions.TechnicalException;
+//import com.socgen.unibank.platform.models.RequestContext;
+//import com.socgen.unibank.platform.service.s3.ObjectStorageClient;
+//import com.socgen.unibank.services.autotest.core.DocumentRepository;
+//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.EntityToDTOConverter;
+//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
+//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderRepository;
+//import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+//import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+//import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
+//import lombok.extern.slf4j.Slf4j;
+//import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.beans.factory.annotation.Qualifier;
+//import org.springframework.stereotype.Component;
+//import org.springframework.web.multipart.MultipartFile;
+//
+//import java.util.ArrayList;
+//import java.util.Date;
+//import java.util.UUID;
+//import java.util.stream.Collectors;
+//
+//@Component
+//@Slf4j
+//public class DocumentUploadHelper {
+//
+//    @Autowired
+//    private DocumentRepository documentRepository;
+//
+//    @Autowired
+//    private FolderRepository folderRepository;
+//
+//    @Autowired
+//    @Qualifier("privateS3Client")
+//    private ObjectStorageClient s3Client;
+//
+//    public DocumentDTO uploadDocument(MultipartFile file, CreateDocumentEntryRequest input, RequestContext context) {
+//        validateFile(file);
+//
+//        try {
+//            String objectName = generateObjectName(file.getOriginalFilename(), context);
+//
+//            // Upload to S3
+//            s3Client.upload(
+//                file.getInputStream(),
+//                objectName,
+//                file.getContentType()
+//            );
+//
+//            // Create document record
+//            DocumentDTO newDocument = createDocumentDTO(input, file, objectName, context);
+//
+//            // Set folder if provided
+//            if (input.getFolderId() != null) {
+//                FolderEntity folder = folderRepository.findById(input.getFolderId())
+//                    .orElseThrow(() -> new TechnicalException("FOLDER_NOT_FOUND", "Folder not found with ID: " + input.getFolderId()));
+//                newDocument.setFolder(EntityToDTOConverter.convertFolderEntityToDTO(folder));
+//            }
+//
+//            return documentRepository.saveDocument(newDocument);
+//
+//        } catch (Exception e) {
+//            log.error("Error uploading document", e);
+//
+//            throw new IllegalArgumentException(" Error uploading document: " + e.getMessage());
+//
+//        }
+//    }
+//
+//    private void validateFile(MultipartFile file) {
+//        if (file == null || file.isEmpty()) {
+//            throw new IllegalArgumentException("File is null or empty");
+//        }
+//
+//        if (!file.getContentType().equals("application/pdf")) {
+//            throw new IllegalArgumentException("Invalid file type Only PDF files are allowed");
+//        }
+//    }
+//
+//    private DocumentDTO createDocumentDTO(CreateDocumentEntryRequest input, MultipartFile file, String objectName, RequestContext context) {
+//        DocumentDTO newDocument = new DocumentDTO();
+//        newDocument.setName(input.getName());
+//        newDocument.setDescription(input.getDescription());
+//        newDocument.setStatus(DocumentStatus.CREATED);
+//        newDocument.setMetadata(input.getMetadata() != null ?
+//            input.getMetadata().entrySet().stream()
+//                .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
+//                .collect(Collectors.toList()) :
+//            new ArrayList<>());
+//        newDocument.setCreationDate(new Date());
+//        newDocument.setModificationDate(new Date());
+//        newDocument.setCreatedBy(new AdminUser("usmane@gmail.com"));
+//        newDocument.setModifiedBy(new AdminUser("usmane@gmail.com"));
+//        newDocument.setFilePath(objectName);
+//        newDocument.setFileName(file.getOriginalFilename());
+//        return newDocument;
+//    }
+//
+//    private String generateObjectName(String originalFilename, RequestContext context) {
+//        return String.format("documents/%s/%s/%s_%s",
+//            context.getEntityId().get().name(),
+//            //context.getUsername(),
+//            UUID.randomUUID().toString(),
+//            originalFilename
+//        );
+//    }
+//}
+
+package com.socgen.unibank.services.autotest.core.usecases;
+
+import com.socgen.unibank.domain.base.AdminUser;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import com.socgen.unibank.platform.exceptions.TechnicalException;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.platform.service.s3.ObjectStorageClient;
+import com.socgen.unibank.services.autotest.core.DocumentRepository;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.EntityToDTOConverter;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderRepository;
+import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 @Component
 @Slf4j
 public class DocumentUploadHelper {
@@ -18,7 +360,7 @@ public class DocumentUploadHelper {
         try {
             // Générer le nom de l'objet avant l'upload
             String objectName = generateObjectName(file.getOriginalFilename());
-            
+
             // Vérifier que objectName n'est pas null
             if (objectName == null || objectName.trim().isEmpty()) {
                 throw new IllegalArgumentException("Generated object name is null or empty");
@@ -26,9 +368,10 @@ public class DocumentUploadHelper {
 
             // Upload to S3
             s3Client.upload(
-                file.getInputStream(),
-                objectName,
-                file.getContentType()
+                    file.getInputStream(),
+                    "documents-test",
+                    objectName,
+                    file.getContentType()
             );
 
             // Créer le document seulement après un upload réussi
@@ -37,11 +380,9 @@ public class DocumentUploadHelper {
             // Set folder if provided
             if (input.getFolderId() != null) {
                 FolderEntity folder = folderRepository.findById(input.getFolderId())
-                    .orElseThrow(() -> new TechnicalException("FOLDER_NOT_FOUND", "Folder not found with ID: " + input.getFolderId()));
+                        .orElseThrow(() -> new TechnicalException("FOLDER_NOT_FOUND", "Folder not found with ID: " + input.getFolderId()));
                 newDocument.setFolder(EntityToDTOConverter.convertFolderEntityToDTO(folder));
             }
-
-            // Sauvegarder le document
             return documentRepository.saveDocument(newDocument);
 
         } catch (Exception e) {
@@ -70,19 +411,20 @@ public class DocumentUploadHelper {
         newDocument.setDescription(input.getDescription());
         newDocument.setStatus(DocumentStatus.CREATED);
         newDocument.setMetadata(input.getMetadata() != null ?
-            input.getMetadata().entrySet().stream()
-                .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
-                .collect(Collectors.toList()) :
-            new ArrayList<>());
+                input.getMetadata().entrySet().stream()
+                        .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
+                        .collect(Collectors.toList()) :
+                new ArrayList<>());
         newDocument.setCreationDate(new Date());
         newDocument.setModificationDate(new Date());
         newDocument.setCreatedBy(new AdminUser("usmane@gmail.com"));
         newDocument.setModifiedBy(new AdminUser("usmane@gmail.com"));
-        
+
         // S'assurer que le file path est défini
-        newDocument.setFilePath(objectName);
-        newDocument.setFileName(file.getOriginalFilename());
-        
+        //newDocument.setFilePath(objectName);
+        newDocument.setFilePath("/soksnsgsvsvsggs");
+        newDocument.setFileName("test");
+
         return newDocument;
     }
 
@@ -92,8 +434,125 @@ public class DocumentUploadHelper {
         }
 
         return String.format("documents/%s_%s",
-            UUID.randomUUID().toString(),
-            originalFilename
+                UUID.randomUUID().toString(),
+                originalFilename
         );
     }
+}
+
+
+
+
+package com.socgen.unibank.services.autotest.core.usecases;
+
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.core.usecases.DocumentUploadHelper;
+import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import io.leangen.graphql.annotations.GraphQLRootContext;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/documents")
+public class DocumentController {
+
+    @Autowired
+    private DocumentUploadHelper documentUploadHelper;
+
+    @Operation(
+        summary = "Upload a new document with metadata",
+        parameters = {
+            @Parameter(ref = "entityIdHeader", required = true)
+        }
+    )
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public DocumentDTO uploadDocument(
+        @RequestParam("file") MultipartFile file,
+        @RequestParam("name") String name,
+        @RequestParam("description") String description,
+        @RequestParam(value = "metadata", required = false) Map<String, String> metadata,
+        @RequestParam(value = "folderId", required = false) Long folderId,
+        @ModelAttribute @GraphQLRootContext RequestContext context
+    ) {
+        CreateDocumentEntryRequest request = new CreateDocumentEntryRequest();
+        request.setName(name);
+        request.setDescription(description);
+        request.setMetadata(metadata);
+        request.setFolderId(folderId);
+
+        return documentUploadHelper.uploadDocument(file, request, context);
+    }
+}
+
+
+
+
+package com.socgen.unibank.services.autotest.model.model;
+import com.socgen.unibank.domain.base.AdminUser;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import com.socgen.unibank.platform.domain.Domain;
+import com.socgen.unibank.platform.domain.URN;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Date;
+import java.util.List;
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentDTO {
+
+    private Long documentId;
+   private String name;
+   private String description;
+   private DocumentStatus status;
+   private List<MetaDataDTO> metadata;
+    private Date creationDate;
+    private Date modificationDate;
+    private AdminUser createdBy;
+    private AdminUser modifiedBy;
+    private FolderDTO folder;
+
+    private String filePath;
+    private String fileName;
+
+  //  private MultipartFile file;
+
+}
+
+
+
+package com.socgen.unibank.services.autotest.model.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Date;
+import java.util.List;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class FolderDTO {
+    private Long id;
+    private String name;
+    private Long parentFolderId; // ID du dossier parent pour gérer les hiérarchies
+    private Date creationDate;
+    private Date modificationDate;
+    private String createdBy;
+    private String modifiedBy;
+    private List<DocumentDTO> documents;
+    private List<FolderDTO> subFolders;
 }
