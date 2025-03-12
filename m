@@ -388,3 +388,61 @@ public class DocumentController {
         return documentUploadHelper.uploadDocumentVersion(file, request, context);
     }
 }
+--------------------
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "document_version_metadata")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentVersionMetadataEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "document_version_id", nullable = false)
+    private DocumentVersionEntity documentVersion;
+
+    @Column(name = "key", nullable = false)
+    private String key;
+
+    @Column(name = "value", nullable = false)
+    private String value;
+}
+
+
+
+————
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "document_version_tags")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentVersionTagEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "document_version_id", nullable = false)
+    private DocumentVersionEntity documentVersion;
+
+    @Column(name = "tag", nullable = false)
+    private String tag;
+}
