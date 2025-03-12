@@ -1,420 +1,3 @@
-Je veux changer ma conception de comment je gére les documents , en fait ce qu'il faut savoir est que je veux gérer  plusieurs version pour un Document .
-
-Donc je dois créer maintenant des versions de document  , et tu dois toujours sauvegarder le nom du fichier upload (nom_fichier_upload_version) 
-Exemple : Pour le Document Normes Dev ( je peux lui créer une version : norme_1.0.pdf , puis  norme_2.0.pdf ,  norme_3.0.pdf) , ce nom unique doit etre sauvegarder dans S3 avec le fichier upload , et dans la base de données le meme nom qui se trouve dans S3 (document_version) , ce qui va faciliter par exemple quand je veux lire ou télécharger une version du document Normes dev  depuis mon frontend il suffit de passer à S3 le nom du fichier que je veux lire car il est stocké dans la base de donnée
-
-Voici ma partie de Code à adapter pour répondre à mes attentes , fais les corrections nécessaires  ::
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-import com.socgen.unibank.platform.domain.URN;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import com.socgen.unibank.domain.base.DocumentStatus;
-import java.util.Date;
-import java.util.List;
-
-@Entity
-@Table(name = "document")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class DocumentEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String name;
-
-    @Column(nullable = false)
-    private String description;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private DocumentStatus status;
-
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "document", orphanRemoval = true, fetch = FetchType.EAGER)
-    private List<MetaDataEntity> metadata;
-
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "creation_date", nullable = false)
-    private Date creationDate;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "modification_date", nullable = false)
-    private Date modificationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
-
-    @Column(nullable = false)
-    private String modifiedBy;
-
-    @ManyToOne
-    @JoinColumn(name = "folder_id")
-    private FolderEntity folder;
-
-    @ManyToOne
-    @JoinColumn(name = "parent_document_id")
-    private DocumentEntity parentDocument;
-
-    @OneToMany(mappedBy = "parentDocument")
-    private List<DocumentEntity> childDocuments;
-
-    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL)
-    private List<DocumentVersionEntity> versions;
-
-
-}
-
-
-
-
-
-
-
-
-
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.Date;
-
-@Entity
-@Table(name = "document_version")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class DocumentVersionEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "document_id", nullable = false)
-    private DocumentEntity document;
-
-    @Column(nullable = false)
-    private Integer versionNumber;
-
-    @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false)
-    private String description;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "creation_date", nullable = false)
-    private Date creationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
-}
-
-
-
-
-
-j'ai mal géré ma logique ici , il répond pas à mes besoins , adapte le car c'est un version d'un document qu'on doit créer ::
-package com.socgen.unibank.services.autotest.core.usecases;
-
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.services.autotest.core.usecases.DocumentUploadHelper;
-import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-import io.leangen.graphql.annotations.GraphQLRootContext;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Map;
-
-@RestController
-@RequestMapping("/documents")
-public class DocumentController {
-
-    @Autowired
-    private DocumentUploadHelper documentUploadHelper;
-
-    @Operation(
-        summary = "Upload a new document with metadata",
-        parameters = {
-            @Parameter(ref = "entityIdHeader", required = true)
-        }
-    )
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public DocumentDTO uploadDocument(
-        @RequestParam("file") MultipartFile file,
-        @RequestParam("name") String name,
-        @RequestParam("description") String description,
-        @RequestParam(value = "metadata", required = false) Map<String, String> metadata,
-        @RequestParam(value = "folderId", required = false) Long folderId,
-        @ModelAttribute @GraphQLRootContext RequestContext context
-    ) {
-        CreateDocumentEntryRequest request = new CreateDocumentEntryRequest();
-        request.setName(name);
-        request.setDescription(description);
-        request.setMetadata(metadata);
-        request.setFolderId(folderId);
-
-        return documentUploadHelper.uploadDocument(file, request, context);
-    }
-}
-
-
-Adapte ici aussi pour qu'il s'adapte avec :
-
-//package com.socgen.unibank.services.autotest.core.usecases;
-//
-//import com.socgen.unibank.domain.base.AdminUser;
-//import com.socgen.unibank.domain.base.DocumentStatus;
-//import com.socgen.unibank.platform.exceptions.TechnicalException;
-//import com.socgen.unibank.platform.models.RequestContext;
-//import com.socgen.unibank.platform.service.s3.ObjectStorageClient;
-//import com.socgen.unibank.services.autotest.core.DocumentRepository;
-//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.EntityToDTOConverter;
-//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
-//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderRepository;
-//import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
-//import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-//import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
-//import lombok.extern.slf4j.Slf4j;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.beans.factory.annotation.Qualifier;
-//import org.springframework.stereotype.Component;
-//import org.springframework.web.multipart.MultipartFile;
-//
-//import java.util.ArrayList;
-//import java.util.Date;
-//import java.util.UUID;
-//import java.util.stream.Collectors;
-//
-//@Component
-//@Slf4j
-//public class DocumentUploadHelper {
-//
-//    @Autowired
-//    private DocumentRepository documentRepository;
-//
-//    @Autowired
-//    private FolderRepository folderRepository;
-//
-//    @Autowired
-//    @Qualifier("privateS3Client")
-//    private ObjectStorageClient s3Client;
-//
-//    public DocumentDTO uploadDocument(MultipartFile file, CreateDocumentEntryRequest input, RequestContext context) {
-//        validateFile(file);
-//
-//        try {
-//            String objectName = generateObjectName(file.getOriginalFilename(), context);
-//
-//            // Upload to S3
-//            s3Client.upload(
-//                file.getInputStream(),
-//                objectName,
-//                file.getContentType()
-//            );
-//
-//            // Create document record
-//            DocumentDTO newDocument = createDocumentDTO(input, file, objectName, context);
-//
-//            // Set folder if provided
-//            if (input.getFolderId() != null) {
-//                FolderEntity folder = folderRepository.findById(input.getFolderId())
-//                    .orElseThrow(() -> new TechnicalException("FOLDER_NOT_FOUND", "Folder not found with ID: " + input.getFolderId()));
-//                newDocument.setFolder(EntityToDTOConverter.convertFolderEntityToDTO(folder));
-//            }
-//
-//            return documentRepository.saveDocument(newDocument);
-//
-//        } catch (Exception e) {
-//            log.error("Error uploading document", e);
-//
-//            throw new IllegalArgumentException(" Error uploading document: " + e.getMessage());
-//
-//        }
-//    }
-//
-//    private void validateFile(MultipartFile file) {
-//        if (file == null || file.isEmpty()) {
-//            throw new IllegalArgumentException("File is null or empty");
-//        }
-//
-//        if (!file.getContentType().equals("application/pdf")) {
-//            throw new IllegalArgumentException("Invalid file type Only PDF files are allowed");
-//        }
-//    }
-//
-//    private DocumentDTO createDocumentDTO(CreateDocumentEntryRequest input, MultipartFile file, String objectName, RequestContext context) {
-//        DocumentDTO newDocument = new DocumentDTO();
-//        newDocument.setName(input.getName());
-//        newDocument.setDescription(input.getDescription());
-//        newDocument.setStatus(DocumentStatus.CREATED);
-//        newDocument.setMetadata(input.getMetadata() != null ?
-//            input.getMetadata().entrySet().stream()
-//                .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
-//                .collect(Collectors.toList()) :
-//            new ArrayList<>());
-//        newDocument.setCreationDate(new Date());
-//        newDocument.setModificationDate(new Date());
-//        newDocument.setCreatedBy(new AdminUser("usmane@gmail.com"));
-//        newDocument.setModifiedBy(new AdminUser("usmane@gmail.com"));
-//        newDocument.setFilePath(objectName);
-//        newDocument.setFileName(file.getOriginalFilename());
-//        return newDocument;
-//    }
-//
-//    private String generateObjectName(String originalFilename, RequestContext context) {
-//        return String.format("documents/%s/%s/%s_%s",
-//            context.getEntityId().get().name(),
-//            //context.getUsername(),
-//            UUID.randomUUID().toString(),
-//            originalFilename
-//        );
-//    }
-//}
-
-package com.socgen.unibank.services.autotest.core.usecases;
-
-import com.socgen.unibank.domain.base.AdminUser;
-import com.socgen.unibank.domain.base.DocumentStatus;
-import com.socgen.unibank.platform.exceptions.TechnicalException;
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.platform.service.s3.ObjectStorageClient;
-import com.socgen.unibank.services.autotest.core.DocumentRepository;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.EntityToDTOConverter;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderRepository;
-import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
-import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
-import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-@Component
-@Slf4j
-public class DocumentUploadHelper {
-
-    @Autowired
-    private DocumentRepository documentRepository;
-
-    @Autowired
-    private FolderRepository folderRepository;
-
-    @Autowired
-    @Qualifier("privateS3Client")
-    private ObjectStorageClient s3Client;
-
-    public DocumentDTO uploadDocument(MultipartFile file, CreateDocumentEntryRequest input, RequestContext context) {
-        validateFile(file);
-
-        try {
-            // Générer le nom de l'objet avant l'upload
-            String objectName = generateObjectName(file.getOriginalFilename());
-
-            // Vérifier que objectName n'est pas null
-            if (objectName == null || objectName.trim().isEmpty()) {
-                throw new IllegalArgumentException("Generated object name is null or empty");
-            }
-
-            // Upload to S3
-            s3Client.upload(
-                    file.getInputStream(),
-                    "documents-test",
-                    objectName,
-                    file.getContentType()
-            );
-
-            // Créer le document seulement après un upload réussi
-            DocumentDTO newDocument = createDocumentDTO(input, file, objectName, context);
-
-            // Set folder if provided
-            if (input.getFolderId() != null) {
-                FolderEntity folder = folderRepository.findById(input.getFolderId())
-                        .orElseThrow(() -> new TechnicalException("FOLDER_NOT_FOUND", "Folder not found with ID: " + input.getFolderId()));
-                newDocument.setFolder(EntityToDTOConverter.convertFolderEntityToDTO(folder));
-            }
-            return documentRepository.saveDocument(newDocument);
-
-        } catch (Exception e) {
-            log.error("Error uploading document: {}", e.getMessage(), e);
-            throw new IllegalArgumentException("Error uploading document: " + e.getMessage());
-        }
-    }
-
-    private void validateFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File is null or empty");
-        }
-
-        if (!file.getContentType().equals("application/pdf")) {
-            throw new IllegalArgumentException("Invalid file type. Only PDF files are allowed");
-        }
-    }
-
-    private DocumentDTO createDocumentDTO(CreateDocumentEntryRequest input, MultipartFile file, String objectName, RequestContext context) {
-        if (objectName == null || objectName.trim().isEmpty()) {
-            throw new IllegalArgumentException("Object name cannot be null or empty");
-        }
-
-        DocumentDTO newDocument = new DocumentDTO();
-        newDocument.setName(input.getName());
-        newDocument.setDescription(input.getDescription());
-        newDocument.setStatus(DocumentStatus.CREATED);
-        newDocument.setMetadata(input.getMetadata() != null ?
-                input.getMetadata().entrySet().stream()
-                        .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
-                        .collect(Collectors.toList()) :
-                new ArrayList<>());
-        newDocument.setCreationDate(new Date());
-        newDocument.setModificationDate(new Date());
-        newDocument.setCreatedBy(new AdminUser("usmane@gmail.com"));
-        newDocument.setModifiedBy(new AdminUser("usmane@gmail.com"));
-
-
-        newDocument.setFilePath("/soksnsgsvsvsggs");
-        newDocument.setFileName("test");
-
-        return newDocument;
-    }
-
-    private String generateObjectName(String originalFilename) {
-        if (originalFilename == null || originalFilename.trim().isEmpty()) {
-            throw new IllegalArgumentException("Original filename cannot be null or empty");
-        }
-
-        return String.format("documents/%s_%s",
-                UUID.randomUUID().toString(),
-                originalFilename
-        );
-    }
-}
-
-
-
-Refais aussi ma migration avec la bonne logique :
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
@@ -461,7 +44,7 @@ Refais aussi ma migration avec la bonne logique :
                 <constraints primaryKey="true"/>
             </column>
             <column name="name" type="VARCHAR(255)">
-                <constraints nullable="false" unique="true"/>
+                <constraints nullable="false"/>
             </column>
             <column name="description" type="VARCHAR(512)">
                 <constraints nullable="false"/>
@@ -482,12 +65,6 @@ Refais aussi ma migration avec la bonne logique :
             <column name="modified_by" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="file_path" type="VARCHAR(512)">
-                <constraints nullable="true"/>
-            </column>
-            <column name="file_name" type="VARCHAR(255)">
-                <constraints nullable="true"/>
-            </column>
         </createTable>
 
         <addForeignKeyConstraint
@@ -498,33 +75,8 @@ Refais aussi ma migration avec la bonne logique :
             constraintName="fk_document_folder"/>
     </changeSet>
 
-    <!-- ChangeSet for Metadata table -->
+    <!-- ChangeSet for Document Version table -->
     <changeSet id="20231001-3" author="developer">
-        <createTable tableName="metadata">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="document_id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="key" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="value" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addForeignKeyConstraint
-            baseTableName="metadata"
-            baseColumnNames="document_id"
-            referencedTableName="document"
-            referencedColumnNames="id"
-            constraintName="fk_metadata_document"/>
-    </changeSet>
-
-    <!-- ChangeSet for DocumentVersion table -->
-    <changeSet id="20231001-4" author="developer">
         <createTable tableName="document_version">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true"/>
@@ -532,13 +84,22 @@ Refais aussi ma migration avec la bonne logique :
             <column name="document_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="version_number" type="INT">
+            <column name="version_number" type="VARCHAR(10)">
                 <constraints nullable="false"/>
             </column>
             <column name="name" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_path" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_name" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="creation_date" type="TIMESTAMP">
@@ -557,7 +118,273 @@ Refais aussi ma migration avec la bonne logique :
             constraintName="fk_document_version_document"/>
     </changeSet>
 
+    <!-- ChangeSet for Document Version Metadata table -->
+    <changeSet id="20231001-4" author="developer">
+        <createTable tableName="document_version_metadata">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="document_version_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="key" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
 
+        <addForeignKeyConstraint
+            baseTableName="document_version_metadata"
+            baseColumnNames="document_version_id"
+            referencedTableName="document_version"
+            referencedColumnNames="id"
+            constraintName="fk_metadata_document_version"/>
+    </changeSet>
 
+    <!-- ChangeSet for Document Version Tags table -->
+    <changeSet id="20231001-5" author="developer">
+        <createTable tableName="document_version_tags">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="document_version_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tag" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="document_version_tags"
+            baseColumnNames="document_version_id"
+            referencedTableName="document_version"
+            referencedColumnNames="id"
+            constraintName="fk_tags_document_version"/>
+    </changeSet>
 </databaseChangeLog>
 
+
+
+
+
+——————————————————
+
+
+@Entity
+@Table(name = "document")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false)
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DocumentStatus status;
+
+    @ManyToOne
+    @JoinColumn(name = "folder_id")
+    private FolderEntity folder;
+
+    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL)
+    private List<DocumentVersionEntity> versions;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "creation_date", nullable = false)
+    private Date creationDate;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "modification_date", nullable = false)
+    private Date modificationDate;
+
+    @Column(nullable = false)
+    private String createdBy;
+
+    @Column(nullable = false)
+    private String modifiedBy;
+}
+
+@Entity
+@Table(name = "document_version")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentVersionEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "document_id", nullable = false)
+    private DocumentEntity document;
+
+    @Column(nullable = false)
+    private String versionNumber;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false)
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DocumentStatus status;
+
+    @Column(nullable = false)
+    private String filePath;
+
+    @Column(nullable = false)
+    private String fileName;
+
+    @OneToMany(mappedBy = "documentVersion", cascade = CascadeType.ALL)
+    private List<DocumentVersionMetadataEntity> metadata;
+
+    @OneToMany(mappedBy = "documentVersion", cascade = CascadeType.ALL)
+    private List<DocumentVersionTagEntity> tags;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "creation_date", nullable = false)
+    private Date creationDate;
+
+    @Column(nullable = false)
+    private String createdBy;
+}
+
+
+
+
+
+—————————————————————
+@Component
+@Slf4j
+public class DocumentUploadHelper {
+
+    @Autowired
+    private DocumentRepository documentRepository;
+
+    @Autowired
+    private DocumentVersionRepository documentVersionRepository;
+
+    @Autowired
+    @Qualifier("privateS3Client")
+    private ObjectStorageClient s3Client;
+
+    public DocumentVersionDTO uploadDocumentVersion(MultipartFile file, CreateDocumentVersionRequest input, RequestContext context) {
+        validateFile(file);
+
+        try {
+            // Générer un nom unique pour le fichier version
+            String versionFileName = generateVersionFileName(file.getOriginalFilename(), input.getVersionNumber());
+            String objectName = generateObjectName(versionFileName);
+
+            // Upload to S3
+            s3Client.upload(
+                file.getInputStream(),
+                "documents",
+                objectName,
+                file.getContentType()
+            );
+
+            // Créer la version du document
+            DocumentVersionDTO version = createDocumentVersionDTO(input, file, objectName, context);
+            return documentVersionRepository.saveDocumentVersion(version);
+
+        } catch (Exception e) {
+            log.error("Error uploading document version: {}", e.getMessage(), e);
+            throw new IllegalArgumentException("Error uploading document version: " + e.getMessage());
+        }
+    }
+
+    private String generateVersionFileName(String originalFilename, String versionNumber) {
+        String baseName = FilenameUtils.getBaseName(originalFilename);
+        String extension = FilenameUtils.getExtension(originalFilename);
+        return String.format("%s_v%s.%s", baseName, versionNumber, extension);
+    }
+
+    private String generateObjectName(String versionFileName) {
+        return String.format("documents/%s/%s",
+            UUID.randomUUID().toString(),
+            versionFileName
+        );
+    }
+
+    private DocumentVersionDTO createDocumentVersionDTO(CreateDocumentVersionRequest input, MultipartFile file, String objectName, RequestContext context) {
+        DocumentVersionDTO version = new DocumentVersionDTO();
+        version.setDocumentId(input.getDocumentId());
+        version.setVersionNumber(input.getVersionNumber());
+        version.setName(input.getName());
+        version.setDescription(input.getDescription());
+        version.setStatus(input.getStatus());
+        version.setFilePath(objectName);
+        version.setFileName(file.getOriginalFilename());
+        version.setCreationDate(new Date());
+        version.setCreatedBy(context.getUsername());
+        version.setMetadata(input.getMetadata());
+        version.setTags(input.getTags());
+        
+        return version;
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File is null or empty");
+        }
+
+        if (!file.getContentType().equals("application/pdf")) {
+            throw new IllegalArgumentException("Invalid file type. Only PDF files are allowed");
+        }
+    }
+}
+
+
+
+—————
+@RestController
+@RequestMapping("/documents")
+public class DocumentController {
+
+    @Autowired
+    private DocumentUploadHelper documentUploadHelper;
+
+    @Operation(
+        summary = "Upload a new document version",
+        parameters = {
+            @Parameter(ref = "entityIdHeader", required = true)
+        }
+    )
+    @PostMapping(value = "/{documentId}/versions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public DocumentVersionDTO uploadDocumentVersion(
+        @PathVariable Long documentId,
+        @RequestParam("file") MultipartFile file,
+        @RequestParam("name") String name,
+        @RequestParam("description") String description,
+        @RequestParam("versionNumber") String versionNumber,
+        @RequestParam("status") DocumentStatus status,
+        @RequestParam(value = "tags", required = false) List<String> tags,
+        @RequestParam(value = "metadata", required = false) Map<String, String> metadata,
+        @ModelAttribute @GraphQLRootContext RequestContext context
+    ) {
+        CreateDocumentVersionRequest request = new CreateDocumentVersionRequest();
+        request.setDocumentId(documentId);
+        request.setName(name);
+        request.setDescription(description);
+        request.setVersionNumber(versionNumber);
+        request.setStatus(status);
+        request.setTags(tags != null ? tags : new ArrayList<>());
+        request.setMetadata(metadata != null ? metadata : new HashMap<>());
+
+        return documentUploadHelper.uploadDocumentVersion(file, request, context);
+    }
+}
