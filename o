@@ -1,7 +1,586 @@
-a) Gestion des Versions
+Voici mes différentes parties de Code ::
+DTOS ::
+package com.socgen.unibank.services.autotest.model.model;
+import com.socgen.unibank.domain.base.AdminUser;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import com.socgen.unibank.platform.domain.Domain;
+import com.socgen.unibank.platform.domain.URN;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Date;
+import java.util.List;
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentDTO {
+
+    private Long documentId;
+   private String name;
+   private String description;
+   private DocumentStatus status;
+    private Date creationDate;
+    private Date modificationDate;
+    private FolderDTO  folder;
+    private List<DocumentVersionDTO>  versions;
+
+}
+
+package com.socgen.unibank.services.autotest.model.model;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.Map;
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreateDocumentEntryRequest {
+    private String name;
+    private String description;
+    private Long folderId;
+
+
+
+}
+
+package com.socgen.unibank.services.autotest.model.model;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.util.Date;
+import java.util.List;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreateDocumentVersionRequest {
+    private String name;
+    private Long documentId;
+    private String description;
+    private Integer versionNumber;
+    private Date creationDate;
+    private String createdBy;
+    private DocumentStatus status;
+    private List<DocumentVersionMetadataEntryRequest> metadata;
+    private List<DocumentVersionTagDTO> tags;
+}
+
+package com.socgen.unibank.services.autotest.model.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreateFolderRequest {
+    private String name;
+    private Long parentFolderId;
+    private String createdBy;
+}
+
+package com.socgen.unibank.services.autotest.model.model;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.OneToMany;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.util.Date;
+import java.util.List;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentVersionDTO {
+    private Long  id;
+    private Long documentId;
+    private  String documentName;
+    private String versionNumber;
+    private String name;
+    private String description;
+    private Date creationDate;
+    private String createdBy;
+    private DocumentStatus status;
+    private String filePath;
+    private String fileName;
+    private List<DocumentVersionMetadataEntryRequest> metadata;
+     //private List<DocumentVersionTagDTO>  tags;
+}
+
+package com.socgen.unibank.services.autotest.model.model;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentVersionMetadataEntryRequest {
+    private Long id;
+    private Long documentVersionId;
+    private String key;
+    private String value;
+
+}
+package com.socgen.unibank.services.autotest.model.model;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentVersionTagDTO {
+    private Long id;
+    private Long documentVersionId;
+    private String key;
+    private String value;
+}
+
+
+
+UseCases ::
+package com.socgen.unibank.services.autotest.model.usecases;
+import com.socgen.unibank.platform.domain.Command;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+public interface CreateDocument   {
+    DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context);
+
+}
+
+
+Créer un Document Version ::
+package com.socgen.unibank.services.autotest.core.usecases;
+
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.core.usecases.DocumentUploadHelper;
+import com.socgen.unibank.services.autotest.model.model.*;
+import io.leangen.graphql.annotations.GraphQLRootContext;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+//@RestController
+//@RequestMapping("/documents")
+//public class DocumentController {
+//
+//    @Autowired
+//    private DocumentUploadHelper documentUploadHelper;
+//
+//    @Operation(
+//        summary = "Upload a new document with metadata",
+//        parameters = {
+//            @Parameter(ref = "entityIdHeader", required = true)
+//        }
+//    )
+//    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    public DocumentDTO uploadDocument(
+//        @RequestParam("file") MultipartFile file,
+//        @RequestParam("name") String name,
+//        @RequestParam("description") String description,
+//        @RequestParam(value = "metadata", required = false) Map<String, String> metadata,
+//        @RequestParam(value = "folderId", required = false) Long folderId,
+//        @ModelAttribute @GraphQLRootContext RequestContext context
+//    ) {
+//        CreateDocumentEntryRequest request = new CreateDocumentEntryRequest();
+//        request.setName(name);
+//        request.setDescription(description);
+//        request.setMetadata(metadata);
+//        request.setFolderId(folderId);
+//
+//        return documentUploadHelper.uploadDocument(file, request, context);
+//    }
+//}
+
+
+@RestController
+@RequestMapping("/documents")
+public class DocumentController {
+
+    @Autowired
+    private DocumentUploadHelper documentUploadHelper;
+
+    @Operation(
+        summary = "Upload a new document version",
+        parameters = {
+            @Parameter(ref = "entityIdHeader", required = true)
+        }
+    )
+    @PostMapping(value = "/{documentId}/versions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public DocumentVersionDTO uploadDocumentVersion(
+        @PathVariable Long documentId,
+        @RequestParam("file") MultipartFile file,
+        @RequestParam("name") String name,
+        @RequestParam("description") String description,
+        @RequestParam("versionNumber") String versionNumber,
+        @RequestParam("status") DocumentStatus status,
+       // @RequestParam(value = "tags", required = false) Map<String, String> tags,
+        @RequestParam(value = "metadata", required = false) Map<String, String> metadata,
+        @ModelAttribute @GraphQLRootContext RequestContext context
+    ) {
+        CreateDocumentVersionRequest request = new CreateDocumentVersionRequest();
+        request.setDocumentId(documentId);
+        request.setName(name);
+        request.setDescription(description);
+        request.setVersionNumber(Integer.valueOf(versionNumber));
+        request.setStatus(status);
+       // request.setTags(tags != null ? (List<DocumentVersionTagDTO>) tags : new ArrayList<>());
+        request.setMetadata(metadata != null ? (List<DocumentVersionMetadataEntryRequest>) metadata :  new ArrayList<>());
+
+        return documentUploadHelper.uploadDocumentVersion(file, request, context);
+    }
+}
+
+
+
+
+package com.socgen.unibank.services.autotest.core.usecases;
+
+import com.socgen.unibank.domain.base.AdminUser;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import com.socgen.unibank.platform.exceptions.TechnicalException;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.platform.service.s3.ObjectStorageClient;
+import com.socgen.unibank.services.autotest.core.DocumentRepository;
+import com.socgen.unibank.services.autotest.core.DocumentVersionRepository;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.EntityToDTOConverter;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderRepository;
+import com.socgen.unibank.services.autotest.model.model.*;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+//@Component
+//@Slf4j
+//public class DocumentUploadHelper {
+//
+//    @Autowired
+//    private DocumentRepository documentRepository;
+//
+//    @Autowired
+//    private FolderRepository folderRepository;
+//
+//    @Autowired
+//    @Qualifier("privateS3Client")
+//    private ObjectStorageClient s3Client;
+//
+//    public DocumentDTO uploadDocument(MultipartFile file, CreateDocumentEntryRequest input, RequestContext context) {
+//        validateFile(file);
+//
+//        try {
+//            // Générer le nom de l'objet avant l'upload
+//            String objectName = generateObjectName(file.getOriginalFilename());
+//
+//            // Vérifier que objectName n'est pas null
+//            if (objectName == null || objectName.trim().isEmpty()) {
+//                throw new IllegalArgumentException("Generated object name is null or empty");
+//            }
+//
+//            // Upload to S3
+//            s3Client.upload(
+//                    file.getInputStream(),
+//                    "documents-test",
+//                    objectName,
+//                    file.getContentType()
+//            );
+//
+//            // Créer le document seulement après un upload réussi
+//            DocumentDTO newDocument = createDocumentDTO(input, file, objectName, context);
+//
+//            // Set folder if provided
+//            if (input.getFolderId() != null) {
+//                FolderEntity folder = folderRepository.findById(input.getFolderId())
+//                        .orElseThrow(() -> new TechnicalException("FOLDER_NOT_FOUND", "Folder not found with ID: " + input.getFolderId()));
+//                newDocument.setFolder(EntityToDTOConverter.convertFolderEntityToDTO(folder));
+//            }
+//            return documentRepository.saveDocument(newDocument);
+//
+//        } catch (Exception e) {
+//            log.error("Error uploading document: {}", e.getMessage(), e);
+//            throw new IllegalArgumentException("Error uploading document: " + e.getMessage());
+//        }
+//    }
+//
+//    private void validateFile(MultipartFile file) {
+//        if (file == null || file.isEmpty()) {
+//            throw new IllegalArgumentException("File is null or empty");
+//        }
+//
+//        if (!file.getContentType().equals("application/pdf")) {
+//            throw new IllegalArgumentException("Invalid file type. Only PDF files are allowed");
+//        }
+//    }
+//
+//    private DocumentDTO createDocumentDTO(CreateDocumentEntryRequest input, MultipartFile file, String objectName, RequestContext context) {
+//        if (objectName == null || objectName.trim().isEmpty()) {
+//            throw new IllegalArgumentException("Object name cannot be null or empty");
+//        }
+//
+//        DocumentDTO newDocument = new DocumentDTO();
+//        newDocument.setName(input.getName());
+//        newDocument.setDescription(input.getDescription());
+//        newDocument.setStatus(DocumentStatus.CREATED);
+//        newDocument.setMetadata(input.getMetadata() != null ?
+//                input.getMetadata().entrySet().stream()
+//                        .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
+//                        .collect(Collectors.toList()) :
+//                new ArrayList<>());
+//        newDocument.setCreationDate(new Date());
+//        newDocument.setModificationDate(new Date());
+//        newDocument.setCreatedBy(new AdminUser("usmane@gmail.com"));
+//        newDocument.setModifiedBy(new AdminUser("usmane@gmail.com"));
+//
+//
+//        newDocument.setFilePath("/soksnsgsvsvsggs");
+//        newDocument.setFileName("test");
+//
+//        return newDocument;
+//    }
+//
+//    private String generateObjectName(String originalFilename) {
+//        if (originalFilename == null || originalFilename.trim().isEmpty()) {
+//            throw new IllegalArgumentException("Original filename cannot be null or empty");
+//        }
+//
+//        return String.format("documents/%s_%s",
+//                UUID.randomUUID().toString(),
+//                originalFilename
+//        );
+//    }
+//}
+@Component
+@Slf4j
+public class DocumentUploadHelper {
+
+    @Autowired
+    private DocumentRepository documentRepository;
+
+    @Autowired
+    private DocumentVersionRepository documentVersionRepository;
+
+    @Autowired
+    @Qualifier("privateS3Client")
+    private ObjectStorageClient s3Client;
+
+    public DocumentVersionDTO uploadDocumentVersion(MultipartFile file, CreateDocumentVersionRequest input, RequestContext context) {
+        validateFile(file);
+
+        try {
+            // Générer un nom unique pour le fichier version
+            String versionFileName = generateVersionFileName(file.getOriginalFilename(), String.valueOf(input.getVersionNumber()));
+            String objectName = generateObjectName(versionFileName);
+
+            // Upload to S3
+            s3Client.upload(
+                file.getInputStream(),
+                "documents-test",
+                objectName,
+                file.getContentType()
+            );
+
+            // Créer la version du document
+            DocumentVersionDTO version = createDocumentVersionDTO(input, file, objectName, context);
+            return documentVersionRepository.saveDocumentVersion(version);
+
+        } catch (Exception e) {
+            log.error("Error uploading document version: {}", e.getMessage(), e);
+            throw new IllegalArgumentException("Error uploading document version: " + e.getMessage());
+        }
+    }
+
+    private String generateVersionFileName(String originalFilename, String versionNumber) {
+        String baseName = FilenameUtils.getBaseName(originalFilename);
+        String extension = FilenameUtils.getExtension(originalFilename);
+        return String.format("%s_v%s.%s", baseName, versionNumber, extension);
+    }
+
+    private String generateObjectName(String versionFileName) {
+        return String.format("documents/%s/%s",
+            UUID.randomUUID().toString(),
+            versionFileName
+        );
+    }
+
+    private DocumentVersionDTO createDocumentVersionDTO(CreateDocumentVersionRequest input, MultipartFile file, String objectName, RequestContext context) {
+        DocumentVersionDTO version = new DocumentVersionDTO();
+        version.setDocumentId(input.getDocumentId());
+        version.setVersionNumber(String.valueOf(input.getVersionNumber()));
+        version.setName(input.getName());
+        version.setDescription(input.getDescription());
+        version.setStatus(DocumentStatus.valueOf("CREATED"));
+        version.setFilePath(objectName);
+        version.setFileName(file.getOriginalFilename());
+        version.setCreationDate(new Date());
+        version.setCreatedBy("admin");
+        version.setMetadata(input.getMetadata());
+        //version.setTags(input.getTags());
+
+        return version;
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File is null or empty");
+        }
+
+        if (!file.getContentType().equals("application/pdf")) {
+            throw new IllegalArgumentException("Invalid file type. Only PDF files are allowed");
+        }
+    }
+}
+
+
+Jpa ::
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
+import com.socgen.unibank.platform.domain.URN;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import java.util.Date;
+import java.util.List;
+
+@Entity
+@Table(name = "document")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false)
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DocumentStatus status;
+
+    @ManyToOne
+    @JoinColumn(name = "folder_id")
+    private FolderEntity folder;
+
+    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL)
+    private List<DocumentVersionEntity> versions;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "creation_date", nullable = false)
+    private Date creationDate;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "modification_date", nullable = false)
+    private Date modificationDate;
+
+    @Column(nullable = false)
+    private String createdBy;
+
+    @Column(nullable = false)
+    private String modifiedBy;
+
+//    @Id
+//    @GeneratedValue(strategy = GenerationType.IDENTITY)
+//    private Long id;
+//
+//    @Column(nullable = false, unique = true)
+//    private String name;
+//
+//    @Column(nullable = false)
+//    private String description;
+//
+//    @Enumerated(EnumType.STRING)
+//    @Column(nullable = false)
+//    private DocumentStatus status;
+//
+//    @OneToMany(cascade = CascadeType.ALL, mappedBy = "document", orphanRemoval = true, fetch = FetchType.EAGER)
+//    private List<MetaDataEntity> metadata;
+//
+//
+//    @Temporal(TemporalType.TIMESTAMP)
+//    @Column(name = "creation_date", nullable = false)
+//    private Date creationDate;
+//
+//    @Temporal(TemporalType.TIMESTAMP)
+//    @Column(name = "modification_date", nullable = false)
+//    private Date modificationDate;
+//
+//    @Column(nullable = false)
+//    private String createdBy;
+//
+//    @Column(nullable = false)
+//    private String modifiedBy;
+//
+//    @ManyToOne
+//    @JoinColumn(name = "folder_id")
+//    private FolderEntity folder;
+//
+//    @ManyToOne
+//    @JoinColumn(name = "parent_document_id")
+//    private DocumentEntity parentDocument;
+//
+//    @OneToMany(mappedBy = "parentDocument")
+//    private List<DocumentEntity> childDocuments;
+//
+//    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL)
+//    private List<DocumentVersionEntity> versions;
+
+
+}
+
+
+
+
+
+
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
+
+import com.socgen.unibank.domain.base.DocumentStatus;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table(name = "document_version")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class DocumentVersionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -12,105 +591,447 @@ public class DocumentVersionEntity {
     private DocumentEntity document;
 
     @Column(nullable = false)
-    private String versionNumber; // Format: "1.0", "1.1", "2.0"
-
-
+    private String versionNumber;
 
     @Column(nullable = false)
-    private String name; // test_1.0.pdf
+    private String name;
 
-    @Column
+    @Column(nullable = false)
     private String description;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    private DocumentStatus status;
+
+    @Column(nullable = false)
+    private String filePath;
+
+    @Column(nullable = false)
+    private String fileName;
+
+    @OneToMany(mappedBy = "documentVersion", cascade = CascadeType.ALL)
+    private List<DocumentVersionMetadataEntity> metadata;
+
+    @OneToMany(mappedBy = "documentVersion", cascade = CascadeType.ALL)
+    private List<DocumentVersionTagEntity> tags;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "creation_date", nullable = false)
     private Date creationDate;
 
     @Column(nullable = false)
     private String createdBy;
 }
 
+ma migration actuel ::
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-b) Document avec Relations Hiérarchiques
+    <!-- ChangeSet for Folder table -->
+    <changeSet id="20231001-1" author="developer">
+        <createTable tableName="folder">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="parent_folder_id" type="BIGINT"/>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modification_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
 
-@Entity
-@Table(name = "document")
-public class DocumentEntity {
-   private String name;
-private String description;
-private DocumentStatus status;
-private List<MetaDataDTO> metadata;
+        <addForeignKeyConstraint
+            baseTableName="folder"
+            baseColumnNames="parent_folder_id"
+            referencedTableName="folder"
+            referencedColumnNames="id"
+            constraintName="fk_folder_parent"/>
+    </changeSet>
+
+    <!-- ChangeSet for Document table -->
+    <changeSet id="20231001-2" author="developer">
+        <createTable tableName="document">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="folder_id" type="BIGINT"/>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modification_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="document"
+            baseColumnNames="folder_id"
+            referencedTableName="folder"
+            referencedColumnNames="id"
+            constraintName="fk_document_folder"/>
+    </changeSet>
+
+    <!-- ChangeSet for Document Version table -->
+    <changeSet id="20231001-3" author="developer">
+        <createTable tableName="document_version">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version_number" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_path" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="document_version"
+            baseColumnNames="document_id"
+            referencedTableName="document"
+            referencedColumnNames="id"
+            constraintName="fk_document_version_document"/>
+    </changeSet>
+
+    <!-- ChangeSet for Document Version Metadata table -->
+    <changeSet id="20231001-4" author="developer">
+        <createTable tableName="document_version_metadata">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="document_version_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="key" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="document_version_metadata"
+            baseColumnNames="document_version_id"
+            referencedTableName="document_version"
+            referencedColumnNames="id"
+            constraintName="fk_metadata_document_version"/>
+    </changeSet>
+
+    <!-- ChangeSet for Document Version Tags table -->
+    <changeSet id="20231001-5" author="developer">
+        <createTable tableName="document_version_tags">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="document_version_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tag" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="document_version_tags"
+            baseColumnNames="document_version_id"
+            referencedTableName="document_version"
+            referencedColumnNames="id"
+            constraintName="fk_tags_document_version"/>
+    </changeSet>
+</databaseChangeLog>
 
 
-    @ManyToOne
-    @JoinColumn(name = "parent_document_id")
-    private DocumentEntity parentDocument;
-
-    @OneToMany(mappedBy = "parentDocument")
-    private List<DocumentEntity> childDocuments;
-
-    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL)
-    private List<DocumentVersionEntity> versions;
+Voici mon erreur au démarrage 
 
 
-}
+025-03-12T14:48:34.552Z  INFO [unibank-service-auto-test,,] 10216 --- [           main] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+2025-03-12T14:48:34.559Z  WARN [unibank-service-auto-test,,] 10216 --- [           main] o.a.c.loader.WebappClassLoaderBase       : The web application [ROOT] appears to have started a thread named [unibank-service-auto-test_queue_consuming] but has failed to stop it. This is very likely to create a memory leak. Stack trace of thread:
+ java.base@17.0.14/java.lang.Thread.sleep(Native Method)
+ java.base@17.0.14/java.lang.Thread.sleep(Thread.java:344)
+ java.base@17.0.14/java.util.concurrent.TimeUnit.sleep(TimeUnit.java:446)
+ app//com.github.fridujo.rabbitmq.mock.MockQueue.lambda$start$2(MockQueue.java:71)
+ app//com.github.fridujo.rabbitmq.mock.MockQueue$$Lambda$985/0x000002a9816bcae0.run(Unknown Source)
+ app//com.github.fridujo.rabbitmq.mock.tool.Exceptions.runAndTransformExceptions(Exceptions.java:18)
+ app//com.github.fridujo.rabbitmq.mock.MockQueue.lambda$start$4(MockQueue.java:70)
+ app//com.github.fridujo.rabbitmq.mock.MockQueue$$Lambda$984/0x000002a9816bc4c0.run(Unknown Source)
+ java.base@17.0.14/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+ java.base@17.0.14/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+ java.base@17.0.14/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+ java.base@17.0.14/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+ java.base@17.0.14/java.lang.Thread.run(Thread.java:840)
+14:48:34.652 [main] ERROR org.springframework.boot.SpringApplication - Application run failed
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'documentController': Unsatisfied dependency expressed through field 'documentUploadHelper': Error creating bean with name 'documentUploadHelper': Unsatisfied dependency expressed through field 'documentVersionRepository': Error creating bean with name 'documentVersionRepository' defined in com.socgen.unibank.services.autotest.core.DocumentVersionRepository defined in @EnableJpaRepositories declared on CoreServiceAutoConfiguration: Could not create query for public abstract com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO com.socgen.unibank.services.autotest.core.DocumentVersionRepository.saveDocumentVersion(com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO); Reason: Failed to create query for method public abstract com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO com.socgen.unibank.services.autotest.core.DocumentVersionRepository.saveDocumentVersion(com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO); No property 'saveDocumentVersion' found for type 'DocumentVersionEntity'
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:767) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:747) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:145) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:492) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1416) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:597) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:520) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:973) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:942) ~[spring-context-6.0.12.jar:6.0.12]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:608) ~[spring-context-6.0.12.jar:6.0.12]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.0.11.jar:3.0.11]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:732) [spring-boot-3.0.11.jar:3.0.11]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:434) [spring-boot-3.0.11.jar:3.0.11]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:310) [spring-boot-3.0.11.jar:3.0.11]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1304) [spring-boot-3.0.11.jar:3.0.11]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1293) [spring-boot-3.0.11.jar:3.0.11]
+	at com.socgen.unibank.services.ServiceDocument.main(ServiceDocument.java:10) [main/:?]
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'documentUploadHelper': Unsatisfied dependency expressed through field 'documentVersionRepository': Error creating bean with name 'documentVersionRepository' defined in com.socgen.unibank.services.autotest.core.DocumentVersionRepository defined in @EnableJpaRepositories declared on CoreServiceAutoConfiguration: Could not create query for public abstract com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO com.socgen.unibank.services.autotest.core.DocumentVersionRepository.saveDocumentVersion(com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO); Reason: Failed to create query for method public abstract com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO com.socgen.unibank.services.autotest.core.DocumentVersionRepository.saveDocumentVersion(com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO); No property 'saveDocumentVersion' found for type 'DocumentVersionEntity'
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:767) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:747) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:145) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:492) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1416) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:597) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:520) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1417) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1337) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:764) ~[spring-beans-6.0.12.jar:6.0.12]
+	... 20 more
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'documentVersionRepository' defined in com.socgen.unibank.services.autotest.core.DocumentVersionRepository defined in @EnableJpaRepositories declared on CoreServiceAutoConfiguration: Could not create query for public abstract com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO com.socgen.unibank.services.autotest.core.DocumentVersionRepository.saveDocumentVersion(com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO); Reason: Failed to create query for method public abstract com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO com.socgen.unibank.services.autotest.core.DocumentVersionRepository.saveDocumentVersion(com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO); No property 'saveDocumentVersion' found for type 'DocumentVersionEntity'
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1770) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:598) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:520) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1417) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1337) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:764) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:747) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:145) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:492) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1416) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:597) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:520) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1417) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1337) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:764) ~[spring-beans-6.0.12.jar:6.0.12]
+	... 20 more
+Caused by: org.springframework.data.repository.query.QueryCreationException: Could not create query for public abstract com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO com.socgen.unibank.services.autotest.core.DocumentVersionRepository.saveDocumentVersion(com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO); Reason: Failed to create query for method public abstract com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO com.socgen.unibank.services.autotest.core.DocumentVersionRepository.saveDocumentVersion(com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO); No property 'saveDocumentVersion' found for type 'DocumentVersionEntity'
+	at org.springframework.data.repository.query.QueryCreationException.create(QueryCreationException.java:101) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.lookupQuery(QueryExecutorMethodInterceptor.java:115) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.mapMethodsToQuery(QueryExecutorMethodInterceptor.java:99) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.lambda$new$0(QueryExecutorMethodInterceptor.java:88) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at java.util.Optional.map(Optional.java:260) ~[?:?]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.<init>(QueryExecutorMethodInterceptor.java:88) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.RepositoryFactorySupport.getRepository(RepositoryFactorySupport.java:357) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport.lambda$afterPropertiesSet$5(RepositoryFactoryBeanSupport.java:279) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.util.Lazy.getNullable(Lazy.java:245) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.util.Lazy.get(Lazy.java:114) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport.afterPropertiesSet(RepositoryFactoryBeanSupport.java:285) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.jpa.repository.support.JpaRepositoryFactoryBean.afterPropertiesSet(JpaRepositoryFactoryBean.java:132) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1817) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1766) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:598) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:520) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1417) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1337) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:764) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:747) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:145) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:492) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1416) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:597) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:520) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1417) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1337) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:764) ~[spring-beans-6.0.12.jar:6.0.12]
+	... 20 more
+Caused by: java.lang.IllegalArgumentException: Failed to create query for method public abstract com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO com.socgen.unibank.services.autotest.core.DocumentVersionRepository.saveDocumentVersion(com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO); No property 'saveDocumentVersion' found for type 'DocumentVersionEntity'
+	at org.springframework.data.jpa.repository.query.PartTreeJpaQuery.<init>(PartTreeJpaQuery.java:96) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.data.jpa.repository.query.JpaQueryLookupStrategy$CreateQueryLookupStrategy.resolveQuery(JpaQueryLookupStrategy.java:124) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.data.jpa.repository.query.JpaQueryLookupStrategy$CreateIfNotFoundQueryLookupStrategy.resolveQuery(JpaQueryLookupStrategy.java:258) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.data.jpa.repository.query.JpaQueryLookupStrategy$AbstractQueryLookupStrategy.resolveQuery(JpaQueryLookupStrategy.java:95) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.lookupQuery(QueryExecutorMethodInterceptor.java:111) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.mapMethodsToQuery(QueryExecutorMethodInterceptor.java:99) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.lambda$new$0(QueryExecutorMethodInterceptor.java:88) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at java.util.Optional.map(Optional.java:260) ~[?:?]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.<init>(QueryExecutorMethodInterceptor.java:88) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.RepositoryFactorySupport.getRepository(RepositoryFactorySupport.java:357) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport.lambda$afterPropertiesSet$5(RepositoryFactoryBeanSupport.java:279) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.util.Lazy.getNullable(Lazy.java:245) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.util.Lazy.get(Lazy.java:114) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport.afterPropertiesSet(RepositoryFactoryBeanSupport.java:285) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.jpa.repository.support.JpaRepositoryFactoryBean.afterPropertiesSet(JpaRepositoryFactoryBean.java:132) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1817) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1766) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:598) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:520) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1417) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1337) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:764) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:747) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:145) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:492) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1416) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:597) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:520) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1417) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1337) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:764) ~[spring-beans-6.0.12.jar:6.0.12]
+	... 20 more
 
 
-4. Service de Gestion des Versions
+aused by: org.springframework.data.mapping.PropertyReferenceException: No property 'saveDocumentVersion' found for type 'DocumentVersionEntity'
+	at org.springframework.data.mapping.PropertyPath.<init>(PropertyPath.java:90) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.mapping.PropertyPath.create(PropertyPath.java:423) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.mapping.PropertyPath.create(PropertyPath.java:399) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.mapping.PropertyPath.lambda$from$0(PropertyPath.java:352) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at java.util.concurrent.ConcurrentMap.computeIfAbsent(ConcurrentMap.java:330) ~[?:?]
+	at org.springframework.data.mapping.PropertyPath.from(PropertyPath.java:334) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.mapping.PropertyPath.from(PropertyPath.java:317) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.query.parser.Part.<init>(Part.java:81) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.query.parser.PartTree$OrPart.lambda$new$0(PartTree.java:242) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197) ~[?:?]
+	at java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:179) ~[?:?]
+	at java.util.Spliterators$ArraySpliterator.forEachRemaining(Spliterators.java:992) ~[?:?]
+	at java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509) ~[?:?]
+	at java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) ~[?:?]
+	at java.util.stream.ReduceOps$ReduceOp.evaluateSequential(ReduceOps.java:921) ~[?:?]
+	at java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[?:?]
+	at java.util.stream.ReferencePipeline.collect(ReferencePipeline.java:682) ~[?:?]
+	at org.springframework.data.repository.query.parser.PartTree$OrPart.<init>(PartTree.java:243) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.query.parser.PartTree$Predicate.lambda$new$0(PartTree.java:372) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197) ~[?:?]
+	at java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:179) ~[?:?]
+	at java.util.Spliterators$ArraySpliterator.forEachRemaining(Spliterators.java:992) ~[?:?]
+	at java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509) ~[?:?]
+	at java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) ~[?:?]
+	at java.util.stream.ReduceOps$ReduceOp.evaluateSequential(ReduceOps.java:921) ~[?:?]
+	at java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[?:?]
+	at java.util.stream.ReferencePipeline.collect(ReferencePipeline.java:682) ~[?:?]
+	at org.springframework.data.repository.query.parser.PartTree$Predicate.<init>(PartTree.java:373) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.query.parser.PartTree.<init>(PartTree.java:93) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.jpa.repository.query.PartTreeJpaQuery.<init>(PartTreeJpaQuery.java:89) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.data.jpa.repository.query.JpaQueryLookupStrategy$CreateQueryLookupStrategy.resolveQuery(JpaQueryLookupStrategy.java:124) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.data.jpa.repository.query.JpaQueryLookupStrategy$CreateIfNotFoundQueryLookupStrategy.resolveQuery(JpaQueryLookupStrategy.java:258) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.data.jpa.repository.query.JpaQueryLookupStrategy$AbstractQueryLookupStrategy.resolveQuery(JpaQueryLookupStrategy.java:95) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.lookupQuery(QueryExecutorMethodInterceptor.java:111) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.mapMethodsToQuery(QueryExecutorMethodInterceptor.java:99) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.lambda$new$0(QueryExecutorMethodInterceptor.java:88) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at java.util.Optional.map(Optional.java:260) ~[?:?]
+	at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.<init>(QueryExecutorMethodInterceptor.java:88) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.RepositoryFactorySupport.getRepository(RepositoryFactorySupport.java:357) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport.lambda$afterPropertiesSet$5(RepositoryFactoryBeanSupport.java:279) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.util.Lazy.getNullable(Lazy.java:245) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.util.Lazy.get(Lazy.java:114) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport.afterPropertiesSet(RepositoryFactoryBeanSupport.java:285) ~[spring-data-commons-3.0.10.jar:3.0.10]
+	at org.springframework.data.jpa.repository.support.JpaRepositoryFactoryBean.afterPropertiesSet(JpaRepositoryFactoryBean.java:132) ~[spring-data-jpa-3.0.10.jar:3.0.10]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1817) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1766) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:598) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:520) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1417) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1337) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:764) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:747) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:145) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:492) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1416) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:597) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:520) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1417) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1337) ~[spring-beans-6.0.12.jar:6.0.12]
+	at org.springframework.beans.factory.annotation.Auto
 
-@Service
-public class DocumentVersionService {
-    
-    @Autowired
-    private DocumentVersionRepository versionRepository;
-    
-    @Autowired
-    private S3Service s3Service;
-
-    public DocumentVersionEntity createNewVersion(DocumentEntity document, MultipartFile file) {
-        // Générer nouveau numéro de version
-        String newVersionNumber = generateNextVersionNumber(document);
-        
-        // Générer le nom de fichier pour S3
-        String s3Key = generateS3Key(document, newVersionNumber, file.getOriginalFilename());
-        
-        // Upload vers S3
-        s3Service.uploadFile(file, s3Key);
-        
-        // Créer l'entité de version
-        DocumentVersionEntity version = new DocumentVersionEntity();
-        version.setDocument(document);
-        version.setVersionNumber(newVersionNumber);
-        version.setS3Key(s3Key);
-        version.setName(generateVersionName(document.getName(), newVersionNumber));
-        version.setCreationDate(new Date());
-        
-        return versionRepository.save(version);
-    }
-
-    private String generateNextVersionNumber(DocumentEntity document) {
-        // Logique pour générer le prochain numéro de version
-        // Ex: "1.0" -> "1.1" ou "2.0" selon la politique de versionnement
-    }
-}
-
-5. Gestion de l'Arborescence
-@Service
-public class DocumentHierarchyService {
-    
-    @Autowired
-    private DocumentRepository documentRepository;
-    
-    public void addChildDocument(Long parentId, Long childId) {
-        DocumentEntity parent = documentRepository.findById(parentId)
-            .orElseThrow(() -> new DocumentNotFoundException(parentId));
-        DocumentEntity child = documentRepository.findById(childId)
-            .orElseThrow(() -> new DocumentNotFoundException(childId));
-            
-        child.setParentDocument(parent);
-        documentRepository.save(child);
-    }
-    
-    public List<DocumentEntity> getDocumentHierarchy(Long documentId) {
-        // Récupérer l'arborescence complète d'un document
-    }
-}
