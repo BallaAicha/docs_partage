@@ -446,3 +446,44 @@ public class DocumentVersionTagEntity {
     @Column(name = "tag", nullable = false)
     private String tag;
 }
+
+
+
+
+
+
+
+
+
+package com.socgen.unibank.services.autotest.model.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentVersionTagDTO {
+    private Long id;
+    private Long documentVersionId;
+    private String tag;
+}
+
+
+
+package com.socgen.unibank.services.autotest.model.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentVersionMetadataDTO {
+    private Long id;
+    private Long documentVersionId;
+    private String key;
+    private String value;
+}
