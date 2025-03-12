@@ -1,177 +1,14 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
-
-    <!-- ChangeSet for Folder table -->
-    <changeSet id="20231001-1" author="developer">
-        <createTable tableName="folder">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="name" type="VARCHAR(255)">
-                <constraints nullable="false" unique="true"/>
-            </column>
-            <column name="parent_folder_id" type="BIGINT"/>
-            <column name="creation_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modification_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modified_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addForeignKeyConstraint
-            baseTableName="folder"
-            baseColumnNames="parent_folder_id"
-            referencedTableName="folder"
-            referencedColumnNames="id"
-            constraintName="fk_folder_parent"/>
-    </changeSet>
-
-    <!-- ChangeSet for Document table -->
-    <changeSet id="20231001-2" author="developer">
-        <createTable tableName="document">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="name" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="description" type="VARCHAR(512)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="status" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="folder_id" type="BIGINT"/>
-            <column name="creation_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modification_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modified_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addForeignKeyConstraint
-            baseTableName="document"
-            baseColumnNames="folder_id"
-            referencedTableName="folder"
-            referencedColumnNames="id"
-            constraintName="fk_document_folder"/>
-    </changeSet>
-
-    <!-- ChangeSet for Document Version table -->
-    <changeSet id="20231001-3" author="developer">
-        <createTable tableName="document_version">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="document_id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="version_number" type="VARCHAR(10)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="name" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="description" type="VARCHAR(512)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="status" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="file_path" type="VARCHAR(512)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="file_name" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="creation_date" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addForeignKeyConstraint
-            baseTableName="document_version"
-            baseColumnNames="document_id"
-            referencedTableName="document"
-            referencedColumnNames="id"
-            constraintName="fk_document_version_document"/>
-    </changeSet>
-
-    <!-- ChangeSet for Document Version Metadata table -->
-    <changeSet id="20231001-4" author="developer">
-        <createTable tableName="document_version_metadata">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="document_version_id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="key" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="value" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addForeignKeyConstraint
-            baseTableName="document_version_metadata"
-            baseColumnNames="document_version_id"
-            referencedTableName="document_version"
-            referencedColumnNames="id"
-            constraintName="fk_metadata_document_version"/>
-    </changeSet>
-
-    <!-- ChangeSet for Document Version Tags table -->
-    <changeSet id="20231001-5" author="developer">
-        <createTable tableName="document_version_tags">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true"/>
-            </column>
-            <column name="document_version_id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="tag" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addForeignKeyConstraint
-            baseTableName="document_version_tags"
-            baseColumnNames="document_version_id"
-            referencedTableName="document_version"
-            referencedColumnNames="id"
-            constraintName="fk_tags_document_version"/>
-    </changeSet>
-</databaseChangeLog>
-
-
-
-
-
-——————————————————
-
+Donne maintenant la logique de création d'un Document ::
+Corrige le ::
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
+import com.socgen.unibank.platform.domain.URN;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table(name = "document")
@@ -213,277 +50,353 @@ public class DocumentEntity {
 
     @Column(nullable = false)
     private String modifiedBy;
+
 }
 
-@Entity
-@Table(name = "document_version")
+
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface DocumentjpaRepo extends JpaRepository<DocumentEntity, Long> {
+
+}
+
+
+
+//package com.socgen.unibank.services.autotest.core.usecases;
+//
+//import com.socgen.unibank.domain.base.AdminUser;
+//import com.socgen.unibank.platform.models.RequestContext;
+//import com.socgen.unibank.services.autotest.core.DocumentRepository;
+//import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+//import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+//import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
+//import com.socgen.unibank.services.autotest.model.usecases.CreateDocument;
+//import org.springframework.stereotype.Service;
+//import com.socgen.unibank.domain.base.DocumentStatus;
+//import java.util.Date;
+//import java.util.stream.Collectors;
+//
+//@Service
+//public class CreateDocumentImpl implements CreateDocument {
+//
+//    private final DocumentRepository documentRepository;
+//
+//    public CreateDocumentImpl(DocumentRepository documentRepository) {
+//        this.documentRepository = documentRepository;
+//    }
+//
+//    @Override
+//    public DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context) {
+//        DocumentDTO newDocument = new DocumentDTO();
+//        newDocument.setName(input.getName());
+//        newDocument.setDescription(input.getDescription());
+//        newDocument.setStatus(DocumentStatus.CREATED);
+//        newDocument.setMetadata(input.getMetadata().entrySet().stream()
+//            .map(entry -> new MetaDataDTO(entry.getKey(), entry.getValue()))
+//            .collect(Collectors.toList()));
+//        newDocument.setCreationDate(new Date());
+//        newDocument.setModificationDate(new Date());
+//        newDocument.setCreatedBy(new AdminUser("usmane@socgen.com"));
+//        newDocument.setModifiedBy(new AdminUser("usmane@socgen.com"));
+//
+//        documentRepository.saveDocument(newDocument);
+//        return newDocument;
+//    }
+//}
+
+package com.socgen.unibank.services.autotest.core.usecases;
+
+import com.socgen.unibank.domain.base.AdminUser;
+import com.socgen.unibank.domain.base.DocumentStatus;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.platform.service.s3.ObjectStorageClient;
+import com.socgen.unibank.services.autotest.core.DocumentRepository;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.EntityToDTOConverter;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderRepository;
+import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
+import com.socgen.unibank.services.autotest.model.usecases.CreateDocument;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+public class CreateDocumentImpl implements CreateDocument {
+
+    private final DocumentRepository documentRepository;
+    private final FolderRepository folderRepository;
+  
+
+    public CreateDocumentImpl(DocumentRepository documentRepository, FolderRepository folderRepository) {
+        this.documentRepository = documentRepository;
+        this.folderRepository = folderRepository;
+  
+    }
+
+
+
+    @Override
+    public DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context) {
+        return null;
+    }
+}
+
+
+
+
+package com.socgen.unibank.services.autotest.model.model;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class DocumentVersionEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "document_id", nullable = false)
-    private DocumentEntity document;
-
-    @Column(nullable = false)
-    private String versionNumber;
-
-    @Column(nullable = false)
+public class CreateDocumentEntryRequest {
     private String name;
-
-    @Column(nullable = false)
     private String description;
+    private Long folderId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private DocumentStatus status;
 
-    @Column(nullable = false)
-    private String filePath;
 
-    @Column(nullable = false)
-    private String fileName;
-
-    @OneToMany(mappedBy = "documentVersion", cascade = CascadeType.ALL)
-    private List<DocumentVersionMetadataEntity> metadata;
-
-    @OneToMany(mappedBy = "documentVersion", cascade = CascadeType.ALL)
-    private List<DocumentVersionTagEntity> tags;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "creation_date", nullable = false)
-    private Date creationDate;
-
-    @Column(nullable = false)
-    private String createdBy;
 }
 
 
 
+package com.socgen.unibank.services.autotest.model.usecases;
+import com.socgen.unibank.platform.domain.Command;
+import com.socgen.unibank.platform.models.RequestContext;
+import com.socgen.unibank.services.autotest.model.model.CreateDocumentEntryRequest;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+public interface CreateDocument   {
+    DocumentDTO handle(CreateDocumentEntryRequest input, RequestContext context);
+
+}
 
 
-—————————————————————
+met à jour ici avec la nouvelle logique :
+//package com.socgen.unibank.services.autotest.gateways.outbound.persistence;
+//
+//import com.socgen.unibank.domain.base.AdminUser;
+//import com.socgen.unibank.platform.domain.URN;
+//import com.socgen.unibank.services.autotest.core.DocumentRepository;
+//import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+//import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
+//import lombok.AllArgsConstructor;
+//import org.springframework.stereotype.Component;
+//
+//import java.util.ArrayList;
+//import java.util.Date;
+//import java.util.List;
+//
+//import com.socgen.unibank.domain.base.DocumentStatus;
+//
+//@Component
+//@AllArgsConstructor
+//public class DocumentRepoImpl implements DocumentRepository {
+//
+//    private final List<DocumentDTO> documents = new ArrayList<>();
+//
+////    @Override
+////    public List<DocumentDTO> findAllDocuments() {
+////        List<DocumentDTO> documents = new ArrayList<>();
+////        documents.add(new DocumentDTO(
+////            new URN(null),
+////            "Document 1",
+////            "Description of Document 1",
+////            DocumentStatus.CREATED,
+////            List.of(new MetaDataDTO("key1", "value1")),
+////            new Date(),
+////            new Date(),
+////            new AdminUser("creator1"),
+////            new AdminUser("modifier1")
+////        ));
+////        documents.add(new DocumentDTO(
+////            new URN(null),
+////            "Document 2",
+////            "Description of Document 2",
+////            DocumentStatus.CREATED,
+////            List.of(new MetaDataDTO("key2", "value2")),
+////            new Date(),
+////            new Date(),
+////            new AdminUser("creator2"),
+////            new AdminUser("modifier2")
+////        ));
+////        return documents;
+////    }
+//
+//    @Override
+//    public void saveDocument(DocumentDTO document) {
+//        documents.add(document);
+//    }
+//
+//
+//}
+
+//package com.socgen.unibank.services.autotest.gateways.outbound.persistence;
+//
+//import com.socgen.unibank.services.autotest.core.DocumentRepository;
+//
+//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.DocumentEntity;
+//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.DocumentjpaRepo;
+//import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.MetaDataEntity;
+//import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+//import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
+//
+//import lombok.AllArgsConstructor;
+//import org.springframework.stereotype.Component;
+//
+//import java.util.List;
+//import java.util.stream.Collectors;
+//
+//@Component
+//@AllArgsConstructor
+//public class DocumentRepoImpl implements DocumentRepository {
+//
+//    private final DocumentjpaRepo documentRepositoryJpa;
+//
+//    @Override
+//    public List<DocumentDTO> findAllDocuments() {
+//        // Charger toutes les entités Document depuis la base de données
+//        List<DocumentEntity> documents = documentRepositoryJpa.findAll();
+//
+//        // Convertir les entités en DTO pour les retourner
+//        return documents.stream()
+//            .map(document -> new DocumentDTO(
+//                document.getId(),
+//                document.getName(),
+//                document.getDescription(),
+//                document.getStatus(),
+//                document.getMetadata().stream()
+//                    .map(metaData -> new MetaDataDTO(metaData.getKey(), metaData.getValue()))
+//                    .collect(Collectors.toList()),
+//                document.getCreationDate(),
+//                document.getModificationDate(),
+//                null,
+//                null
+//            ))
+//            .collect(Collectors.toList());
+//    }
+//
+//    @Override
+//    public void saveDocument(DocumentDTO documentDTO) {
+//
+//        DocumentEntity document = new DocumentEntity();
+//
+//        document.setName(documentDTO.getName());
+//        document.setDescription(documentDTO.getDescription());
+//        document.setStatus(documentDTO.getStatus());
+//        document.setCreationDate(documentDTO.getCreationDate());
+//        document.setModificationDate(documentDTO.getModificationDate());
+//        document.setCreatedBy(documentDTO.getCreatedBy().getEmail());  // Assuming AdminUser has an `email` field
+//        document.setModifiedBy(documentDTO.getModifiedBy().getEmail());
+//
+//
+//        List<MetaDataEntity> metadataList = documentDTO.getMetadata().stream()
+//            .map(metadataDTO -> new MetaDataEntity(null, document, metadataDTO.getKey(), metadataDTO.getValue()))
+//            .collect(Collectors.toList());
+//        document.setMetadata(metadataList);
+//
+//        documentRepositoryJpa.save(document);
+//    }
+//}
+
+
+package com.socgen.unibank.services.autotest.gateways.outbound.persistence;
+
+import com.socgen.unibank.services.autotest.core.DocumentRepository;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.DocumentEntity;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.DocumentjpaRepo;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.FolderEntity;
+import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.MetaDataEntity;
+import com.socgen.unibank.services.autotest.model.model.DocumentDTO;
+import com.socgen.unibank.services.autotest.model.model.FolderDTO;
+import com.socgen.unibank.services.autotest.model.model.MetaDataDTO;
+import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Component
-@Slf4j
-public class DocumentUploadHelper {
+@AllArgsConstructor
+public class DocumentRepoImpl implements DocumentRepository {
 
-    @Autowired
-    private DocumentRepository documentRepository;
+    private final DocumentjpaRepo documentRepositoryJpa;
 
-    @Autowired
-    private DocumentVersionRepository documentVersionRepository;
+    @Override
+    public List<DocumentDTO> findAllDocuments() {
+        // Charger toutes les entités Document depuis la base de données
+        List<DocumentEntity> documents = documentRepositoryJpa.findAll();
 
-    @Autowired
-    @Qualifier("privateS3Client")
-    private ObjectStorageClient s3Client;
+        // Convertir les entités en DTO pour les retourner
+        return documents.stream()
+            .map(document -> new DocumentDTO(
+                document.getId(),
+                document.getName(),
+                document.getDescription(),
+                document.getStatus(),
+                document.getMetadata().stream()
+                    .map(metaData -> new MetaDataDTO(metaData.getKey(), metaData.getValue()))
+                    .collect(Collectors.toList()),
+                document.getCreationDate(),
+                document.getModificationDate(),
+                null, // Assuming createdBy and modifiedBy will be set later
+                null, // Assuming createdBy and modifiedBy will be set later
+                document.getFolder() != null ? new FolderDTO(
+                    document.getFolder().getId(),
+                    document.getFolder().getName(),
+                    document.getFolder().getParentFolder() != null ? document.getFolder().getParentFolder().getId() : null,
+                    document.getFolder().getCreationDate(),
+                    document.getFolder().getModificationDate(),
+                    document.getFolder().getCreatedBy(),
+                    document.getFolder().getModifiedBy(),
+                    null, // Assuming documents and subfolders are not needed here
+                    null  // Assuming documents and subfolders are not needed here
+                ) : null,
+                document.getFilePath(),
+                document.getFileName()
 
-    public DocumentVersionDTO uploadDocumentVersion(MultipartFile file, CreateDocumentVersionRequest input, RequestContext context) {
-        validateFile(file);
-
-        try {
-            // Générer un nom unique pour le fichier version
-            String versionFileName = generateVersionFileName(file.getOriginalFilename(), input.getVersionNumber());
-            String objectName = generateObjectName(versionFileName);
-
-            // Upload to S3
-            s3Client.upload(
-                file.getInputStream(),
-                "documents",
-                objectName,
-                file.getContentType()
-            );
-
-            // Créer la version du document
-            DocumentVersionDTO version = createDocumentVersionDTO(input, file, objectName, context);
-            return documentVersionRepository.saveDocumentVersion(version);
-
-        } catch (Exception e) {
-            log.error("Error uploading document version: {}", e.getMessage(), e);
-            throw new IllegalArgumentException("Error uploading document version: " + e.getMessage());
-        }
+            ))
+            .collect(Collectors.toList());
     }
 
-    private String generateVersionFileName(String originalFilename, String versionNumber) {
-        String baseName = FilenameUtils.getBaseName(originalFilename);
-        String extension = FilenameUtils.getExtension(originalFilename);
-        return String.format("%s_v%s.%s", baseName, versionNumber, extension);
-    }
+    @Override
+    public DocumentDTO saveDocument(DocumentDTO documentDTO) {
+        DocumentEntity document = new DocumentEntity();
+        document.setName(documentDTO.getName());
+        document.setDescription(documentDTO.getDescription());
+        document.setStatus(documentDTO.getStatus());
+        document.setCreationDate(documentDTO.getCreationDate());
+        document.setModificationDate(documentDTO.getModificationDate());
+        document.setCreatedBy(documentDTO.getCreatedBy().getEmail());  // Assuming AdminUser has an `email` field
+        document.setModifiedBy(documentDTO.getModifiedBy().getEmail());
 
-    private String generateObjectName(String versionFileName) {
-        return String.format("documents/%s/%s",
-            UUID.randomUUID().toString(),
-            versionFileName
-        );
-    }
-
-    private DocumentVersionDTO createDocumentVersionDTO(CreateDocumentVersionRequest input, MultipartFile file, String objectName, RequestContext context) {
-        DocumentVersionDTO version = new DocumentVersionDTO();
-        version.setDocumentId(input.getDocumentId());
-        version.setVersionNumber(input.getVersionNumber());
-        version.setName(input.getName());
-        version.setDescription(input.getDescription());
-        version.setStatus(input.getStatus());
-        version.setFilePath(objectName);
-        version.setFileName(file.getOriginalFilename());
-        version.setCreationDate(new Date());
-        version.setCreatedBy(context.getUsername());
-        version.setMetadata(input.getMetadata());
-        version.setTags(input.getTags());
-        
-        return version;
-    }
-
-    private void validateFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File is null or empty");
+        if (documentDTO.getFolder() != null) {
+            FolderEntity folderEntity = new FolderEntity();
+            folderEntity.setId(documentDTO.getFolder().getId());
+            document.setFolder(folderEntity);
         }
 
-        if (!file.getContentType().equals("application/pdf")) {
-            throw new IllegalArgumentException("Invalid file type. Only PDF files are allowed");
-        }
+        List<MetaDataEntity> metadataList = documentDTO.getMetadata().stream()
+            .map(metadataDTO -> new MetaDataEntity(null, document, metadataDTO.getKey(), metadataDTO.getValue()))
+            .collect(Collectors.toList());
+        document.setMetadata(metadataList);
+
+        documentRepositoryJpa.save(document);
+        return documentDTO;
     }
 }
 
 
-
-—————
-@RestController
-@RequestMapping("/documents")
-public class DocumentController {
-
-    @Autowired
-    private DocumentUploadHelper documentUploadHelper;
-
-    @Operation(
-        summary = "Upload a new document version",
-        parameters = {
-            @Parameter(ref = "entityIdHeader", required = true)
-        }
-    )
-    @PostMapping(value = "/{documentId}/versions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public DocumentVersionDTO uploadDocumentVersion(
-        @PathVariable Long documentId,
-        @RequestParam("file") MultipartFile file,
-        @RequestParam("name") String name,
-        @RequestParam("description") String description,
-        @RequestParam("versionNumber") String versionNumber,
-        @RequestParam("status") DocumentStatus status,
-        @RequestParam(value = "tags", required = false) List<String> tags,
-        @RequestParam(value = "metadata", required = false) Map<String, String> metadata,
-        @ModelAttribute @GraphQLRootContext RequestContext context
-    ) {
-        CreateDocumentVersionRequest request = new CreateDocumentVersionRequest();
-        request.setDocumentId(documentId);
-        request.setName(name);
-        request.setDescription(description);
-        request.setVersionNumber(versionNumber);
-        request.setStatus(status);
-        request.setTags(tags != null ? tags : new ArrayList<>());
-        request.setMetadata(metadata != null ? metadata : new HashMap<>());
-
-        return documentUploadHelper.uploadDocumentVersion(file, request, context);
-    }
-}
---------------------
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Entity
-@Table(name = "document_version_metadata")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class DocumentVersionMetadataEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "document_version_id", nullable = false)
-    private DocumentVersionEntity documentVersion;
-
-    @Column(name = "key", nullable = false)
-    private String key;
-
-    @Column(name = "value", nullable = false)
-    private String value;
-}
-
-
-
-————
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa;
-
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Entity
-@Table(name = "document_version_tags")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class DocumentVersionTagEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "document_version_id", nullable = false)
-    private DocumentVersionEntity documentVersion;
-
-    @Column(name = "tag", nullable = false)
-    private String tag;
-}
-
-
-
-
-
-
-
-
-
-package com.socgen.unibank.services.autotest.model.model;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class DocumentVersionTagDTO {
-    private Long id;
-    private Long documentVersionId;
-    private String tag;
-}
-
-
-
-package com.socgen.unibank.services.autotest.model.model;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class DocumentVersionMetadataDTO {
-    private Long id;
-    private Long documentVersionId;
-    private String key;
-    private String value;
-}
