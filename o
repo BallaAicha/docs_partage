@@ -1,210 +1,293 @@
-package com.socgen.unibank.services.autotest.core;
+Voici le code à adapter pour répondre à mes besoins :
+NB : veille à respecter scrupuleusement mes besoins à la lettre :
+Code :
 
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.DocumentVersionEntity;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+package com.example.generator.dto;
 
-@Repository
-public interface DocumentVersionRepository extends JpaRepository<DocumentVersionEntity, Long> {
+import lombok.Data;
+
+@Data
+public class ProjectRequest {
+    private String projectName;
+    private String javaVersion;
+    private String gradleVersion;
+    private String groupId;
+    private String artifactId;
+    private String description;
 }
 
 
 
-———————
-package com.socgen.unibank.services.autotest.gateways.outbound.persistence;
 
-import com.socgen.unibank.domain.base.DocumentStatus;
-import com.socgen.unibank.services.autotest.core.DocumentVersionRepository;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.DocumentEntity;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.DocumentVersionEntity;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.DocumentVersionMetadataEntity;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.jpa.DocumentVersionTagEntity;
-import com.socgen.unibank.services.autotest.model.model.DocumentVersionDTO;
-import com.socgen.unibank.services.autotest.model.model.DocumentVersionMetadataEntryRequest;
-import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Component;
+——————————
+package com.example.generator.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.example.generator.dto.ProjectRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
 
-@Component
-@AllArgsConstructor
-public class DocumentVersionRepoImpl {
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
-    private final DocumentVersionRepository documentVersionRepository;
+@Service
+@RequiredArgsConstructor
+public class ProjectGeneratorService {
 
-    public DocumentVersionDTO saveDocumentVersion(DocumentVersionDTO versionDTO) {
-        DocumentVersionEntity entity = new DocumentVersionEntity();
+    public Resource generateProject(ProjectRequest request) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();//permer de stocker les données dans un tableau d'octets cad en mémoire c'eest le cas  ou on ve
+             ZipOutputStream zos = new ZipOutputStream(baos)) {
+
+            // Generate root project files
+            generateRootProjectFiles(zos, request);
+
+            // Generate core module
+            generateCoreModule(zos, request);
+
+            // Generate API module
+            generateApiModule(zos, request);
+
+            // Generate service module
+            generateServiceModule(zos, request);
+
+            zos.finish();
+            return new ByteArrayResource(baos.toByteArray());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to generate project", e);
+        }
+    }
+
+    private void generateRootProjectFiles(ZipOutputStream zos, ProjectRequest request) throws IOException {
+        // settings.gradle
+        String settingsGradle = String.format("""
+            rootProject.name = '%s'
+            include 'core'
+            include 'api'
+            include 'service'
+            """, request.getProjectName());
+        addToZip(zos, "settings.gradle", settingsGradle);
+
+        // build.gradle
+        String buildGradle = String.format("""
+            plugins {
+                id 'org.springframework.boot' version '3.2.2' apply false
+                id 'io.spring.dependency-management' version '1.1.4' apply false
+                id 'java'
+            }
+
+            allprojects {
+                group = '%s'
+                version = '0.0.1-SNAPSHOT'
+
+                repositories {
+                    mavenCentral()
+                }
+            }
+
+            subprojects {
+                apply plugin: 'java'
+                apply plugin: 'org.springframework.boot'
+                apply plugin: 'io.spring.dependency-management'
+
+                java {
+                    sourceCompatibility = '%s'
+                }
+
+                dependencies {
+                    compileOnly 'org.projectlombok:lombok'
+                    annotationProcessor 'org.projectlombok:lombok'
+                }
+            }
+            """, request.getGroupId(), "JavaVersion.VERSION_" + request.getJavaVersion());
+        addToZip(zos, "build.gradle", buildGradle);
+    }
+
+    private void generateCoreModule(ZipOutputStream zos, ProjectRequest request) throws IOException {
+        String basePackagePath = request.getGroupId().replace('.', '/') + "/" + request.getArtifactId();
+
+        // Core module build.gradle
+        String coreBuildGradle = """
+            dependencies {
+                implementation 'org.springframework.boot:spring-boot-starter'
+            }
+            """;
+        addToZip(zos, "core/build.gradle", coreBuildGradle);
+
+        // Sample domain entity
+        String entityClass = String.format("""
+            package %s.core.domain;
+
+            import lombok.Data;
+
+            @Data
+            public class SampleEntity {
+                private String id;
+                private String name;
+            }
+            """, request.getGroupId());
+        addToZip(zos, "core/src/main/java/" + basePackagePath + "/core/domain/SampleEntity.java", entityClass);
+
+        // Sample port
+        String portInterface = String.format("""
+            package %s.core.ports;
+
+            import %s.core.domain.SampleEntity;
+
+            public interface SamplePort {
+                SampleEntity save(SampleEntity entity);
+                SampleEntity findById(String id);
+            }
+            """, request.getGroupId(), request.getGroupId());
+        addToZip(zos, "core/src/main/java/" + basePackagePath + "/core/ports/SamplePort.java", portInterface);
+    }
+
+    private void generateApiModule(ZipOutputStream zos, ProjectRequest request) throws IOException {
+        String basePackagePath = request.getGroupId().replace('.', '/') + "/" + request.getArtifactId();
+
+        // API module build.gradle
+        String apiBuildGradle = """
+            dependencies {
+                implementation project(':core')
+                implementation 'org.springframework.boot:spring-boot-starter-web'
+            }
+            """;
+        addToZip(zos, "api/build.gradle", apiBuildGradle);
+
+        // Sample controller
+        String controllerClass = String.format("""
+            package %s.api.controller;
+
+            import %s.core.domain.SampleEntity;
+            import %s.core.ports.SamplePort;
+            import lombok.RequiredArgsConstructor;
+            import org.springframework.web.bind.annotation.*;
+
+            @RestController
+            @RequestMapping("/api/samples")
+            @RequiredArgsConstructor
+            public class SampleController {
+                private final SamplePort samplePort;
+
+                @PostMapping
+                public SampleEntity create(@RequestBody SampleEntity entity) {
+                    return samplePort.save(entity);
+                }
+
+                @GetMapping("/{id}")
+                public SampleEntity getById(@PathVariable String id) {
+                    return samplePort.findById(id);
+                }
+            }
+            """, request.getGroupId(), request.getGroupId(), request.getGroupId());
+        addToZip(zos, "api/src/main/java/" + basePackagePath + "/api/controller/SampleController.java", controllerClass);
+    }
+
+    private void generateServiceModule(ZipOutputStream zos, ProjectRequest request) throws IOException {
+        String basePackagePath = request.getGroupId().replace('.', '/') + "/" + request.getArtifactId();
+
+        // Service module build.gradle
+        String serviceBuildGradle = """
+            dependencies {
+                implementation project(':core')
+                implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+                runtimeOnly 'com.h2database:h2'
+            }
+            """;
+        addToZip(zos, "service/build.gradle", serviceBuildGradle);
+
+        // Sample service implementation
+        String serviceClass = String.format("""
+            package %s.service.adapter;
+
+            import %s.core.domain.SampleEntity;
+            import %s.core.ports.SamplePort;
+            import org.springframework.stereotype.Service;
+
+            import java.util.HashMap;
+            import java.util.Map;
+            import java.util.UUID;
+
+            @Service
+            public class SampleAdapter implements SamplePort {
+                private final Map<String, SampleEntity> storage = new HashMap<>();
+
+                @Override
+                public SampleEntity save(SampleEntity entity) {
+                    if (entity.getId() == null) {
+                        entity.setId(UUID.randomUUID().toString());
+                    }
+                    storage.put(entity.getId(), entity);
+                    return entity;
+                }
+
+                @Override
+                public SampleEntity findById(String id) {
+                    return storage.get(id);
+                }
+            }
+            """, request.getGroupId(), request.getGroupId(), request.getGroupId());
+        addToZip(zos, "service/src/main/java/" + basePackagePath + "/service/adapter/SampleAdapter.java", serviceClass);
+
+        // Main application class
+        String mainClass = String.format("""
+            package %s;
+
+            import org.springframework.boot.SpringApplication;
+            import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+            @SpringBootApplication
+            public class Application {
+                public static void main(String[] args) {
+                    SpringApplication.run(Application.class, args);
+                }
+            }
+            """, request.getGroupId());
+        addToZip(zos, "service/src/main/java/" + basePackagePath + "/Application.java", mainClass);
+    }
+
+    private void addToZip(ZipOutputStream zos, String path, String content) throws IOException {
+        ZipEntry entry = new ZipEntry(path);
+        zos.putNextEntry(entry);
+        zos.write(content.getBytes(StandardCharsets.UTF_8));
+        zos.closeEntry();
+    }
+}
+
+——————————————————
+
+
+package com.example.generator.controller;
+
+import com.example.generator.dto.ProjectRequest;
+import com.example.generator.service.ProjectGeneratorService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api")
+@RequiredArgsConstructor
+public class ProjectGeneratorController {
+
+    private final ProjectGeneratorService projectGeneratorService;
+
+    @PostMapping("/generate")
+    public ResponseEntity<Resource> generateProject(@RequestBody ProjectRequest request) {
+        Resource projectZip = projectGeneratorService.generateProject(request);
         
-        // Set basic properties
-        entity.setVersionNumber(versionDTO.getVersionNumber());
-        entity.setName(versionDTO.getName());
-        entity.setDescription(versionDTO.getDescription());
-        entity.setStatus(versionDTO.getStatus() != null ? versionDTO.getStatus() : DocumentStatus.CREATED);
-        entity.setFilePath(versionDTO.getFilePath());
-        entity.setFileName(versionDTO.getFileName());
-        entity.setCreationDate(versionDTO.getCreationDate());
-        entity.setCreatedBy(versionDTO.getCreatedBy());
-
-        // Set document reference
-        DocumentEntity documentEntity = new DocumentEntity();
-        documentEntity.setId(versionDTO.getDocumentId());
-        entity.setDocument(documentEntity);
-
-        // Set metadata
-        if (versionDTO.getMetadata() != null) {
-            List<DocumentVersionMetadataEntity> metadataEntities = versionDTO.getMetadata().stream()
-                .map(metadata -> {
-                    DocumentVersionMetadataEntity metadataEntity = new DocumentVersionMetadataEntity();
-                    metadataEntity.setDocumentVersion(entity);
-                    metadataEntity.setKey(metadata.getKey());
-                    metadataEntity.setValue(metadata.getValue());
-                    return metadataEntity;
-                })
-                .collect(Collectors.toList());
-            entity.setMetadata(metadataEntities);
-        }
-
-        // Save the entity
-        DocumentVersionEntity savedEntity = documentVersionRepository.save(entity);
-
-        // Convert back to DTO
-        return convertToDTO(savedEntity);
-    }
-
-    private DocumentVersionDTO convertToDTO(DocumentVersionEntity entity) {
-        DocumentVersionDTO dto = new DocumentVersionDTO();
-        dto.setId(entity.getId());
-        dto.setDocumentId(entity.getDocument().getId());
-        dto.setVersionNumber(entity.getVersionNumber());
-        dto.setName(entity.getName());
-        dto.setDescription(entity.getDescription());
-        dto.setStatus(entity.getStatus());
-        dto.setFilePath(entity.getFilePath());
-        dto.setFileName(entity.getFileName());
-        dto.setCreationDate(entity.getCreationDate());
-        dto.setCreatedBy(entity.getCreatedBy());
-
-        if (entity.getMetadata() != null) {
-            List<DocumentVersionMetadataEntryRequest> metadataList = entity.getMetadata().stream()
-                .map(metadata -> new DocumentVersionMetadataEntryRequest(
-                    metadata.getId(),
-                    entity.getId(),
-                    metadata.getKey(),
-                    metadata.getValue()
-                ))
-                .collect(Collectors.toList());
-            dto.setMetadata(metadataList);
-        } else {
-            dto.setMetadata(new ArrayList<>());
-        }
-
-        return dto;
-    }
-}
-
-
-
-
-
-
-
-—————
-package com.socgen.unibank.services.autotest.core.usecases;
-
-import com.socgen.unibank.domain.base.DocumentStatus;
-import com.socgen.unibank.platform.models.RequestContext;
-import com.socgen.unibank.platform.service.s3.ObjectStorageClient;
-import com.socgen.unibank.services.autotest.core.DocumentRepository;
-import com.socgen.unibank.services.autotest.gateways.outbound.persistence.DocumentVersionRepoImpl;
-import com.socgen.unibank.services.autotest.model.model.*;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FilenameUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Date;
-import java.util.UUID;
-
-@Component
-@Slf4j
-public class DocumentUploadHelper {
-
-    @Autowired
-    private DocumentRepository documentRepository;
-
-    @Autowired
-    private DocumentVersionRepoImpl documentVersionRepo;
-
-    @Autowired
-    @Qualifier("privateS3Client")
-    private ObjectStorageClient s3Client;
-
-    public DocumentVersionDTO uploadDocumentVersion(MultipartFile file, CreateDocumentVersionRequest input, RequestContext context) {
-        validateFile(file);
-
-        try {
-            // Générer un nom unique pour le fichier version
-            String versionFileName = generateVersionFileName(file.getOriginalFilename(), String.valueOf(input.getVersionNumber()));
-            String objectName = generateObjectName(versionFileName);
-
-            // Upload to S3
-            s3Client.upload(
-                file.getInputStream(),
-                "documents-test",
-                objectName,
-                file.getContentType()
-            );
-
-            // Créer la version du document
-            DocumentVersionDTO version = createDocumentVersionDTO(input, file, objectName, context);
-            return documentVersionRepo.saveDocumentVersion(version);
-
-        } catch (Exception e) {
-            log.error("Error uploading document version: {}", e.getMessage(), e);
-            throw new IllegalArgumentException("Error uploading document version: " + e.getMessage());
-        }
-    }
-
-    private String generateVersionFileName(String originalFilename, String versionNumber) {
-        String baseName = FilenameUtils.getBaseName(originalFilename);
-        String extension = FilenameUtils.getExtension(originalFilename);
-        return String.format("%s_v%s.%s", baseName, versionNumber, extension);
-    }
-
-    private String generateObjectName(String versionFileName) {
-        return String.format("documents/%s/%s",
-            UUID.randomUUID().toString(),
-            versionFileName
-        );
-    }
-
-    private DocumentVersionDTO createDocumentVersionDTO(CreateDocumentVersionRequest input, MultipartFile file, String objectName, RequestContext context) {
-        DocumentVersionDTO version = new DocumentVersionDTO();
-        version.setDocumentId(input.getDocumentId());
-        version.setVersionNumber(String.valueOf(input.getVersionNumber()));
-        version.setName(input.getName());
-        version.setDescription(input.getDescription());
-        version.setStatus(input.getStatus() != null ? input.getStatus() : DocumentStatus.CREATED);
-        version.setFilePath(objectName);
-        version.setFileName(file.getOriginalFilename());
-        version.setCreationDate(new Date());
-        version.setCreatedBy(context.getUsername());
-        version.setMetadata(input.getMetadata());
-
-        return version;
-    }
-
-    private void validateFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File is null or empty");
-        }
-
-        if (!file.getContentType().equals("application/pdf")) {
-            throw new IllegalArgumentException("Invalid file type. Only PDF files are allowed");
-        }
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + request.getProjectName() + ".zip\"")
+            .body(projectZip);
     }
 }
